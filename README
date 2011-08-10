@@ -18,7 +18,7 @@ gem install codegraph
 DEVELOPMENT:
 I take codegraph as a moving target. I uses it for PHP in the beginning, but
 ctags knows a lot languages. So took over Bash and Perl, too. Now is mainly to C and Fortran. That's why I added these two to codegraph. Preprocessing a little bit tricky, but at least for C, it works (hopefully).
-If you have any kind of feature wished, please let me know.
+If you have any kind of feature wishes, please let me know.
 
 THANKS:
 Horst Duchene, developer of the Ruby Graph Library
