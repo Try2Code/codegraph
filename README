@@ -1,37 +1,24 @@
 ABOUT CODEGRAPH:
-'codegraph' is an analysis tool for PHP-, PERL and Bash-libraries. It scans files from a list and extracts the the functions therein. Then it extracts the body of each function and tries to find any other of the functions found before. If successfull, it genereates an edge from the function which calls the other function (calling function ----> called function). If no function is found, it generates a single knode.
-'codegraph' needs the directory $HOME/.codegraph for some files. You can generate is manually or 'codegraph' will do this for you, when it's started the first time.
+'codegraph' is an analysis tool for PHP-, PERL, Bash, C and Fortran-libraries.
+It scans files from a list and extracts the the functions therein. Then it
+extracts the body of each function and tries to find any other of the functions
+found before. If successfull, it genereates an edge from the function which
+calls the other function (calling function ----> called function). If no
+function is found, it generates a single knode.  'codegraph' needs the
+directory $HOME/.codegraph for some files. You can generate is manually or
+'codegraph' will do this for you, when it's started the first time.
+
 DOCUMENTATION:
-For technical issues I recommend to use 'rdoc -a'. Otherwise use the man page or just  type "codegraph --help".
-DOWNLOAD:
-PLEASE use the link from the CVS-Repository:
-http://rubyforge.org/frs/?group_id=408&release_id=5178
-to get the latest source.
+For technical issues I recommend to use 'rdoc -a'. Otherwise use the man page
+or just  type "codegraph --help".
+
 INSTALLATION:
-    ruby install.rb
-copies the library into your sitelibdir and the executabe to /usr/local/bin. If you want to place these files somewhere else, edit install.rb.
-Needed libraries are:
-        - Ruby Graph Library (rgl), download via rgl.sourceforge.org,
-          the Ruby Application Archive raa.ruby-lang.org/project/rgl or
-          the codegraph project page (codegraph.rubyforge.org)
-        - graphivz package from AT&T, compiled packages are provided 
-          for many distros. If you cannot find it, get it directly
-          from http://www.research.att.com/sw/tools/graphviz/download.html
-        - ctags (with PHP and Perl support, http://ctags.sourceforge.net)
+gem install codegraph
 
-TEST:
-try: src/codegraph -F "examples/*.php" inside the $YOUR_CVS_PATH/codegraph
-
-WRITING SCRIPTS USING FUNCGRAPH.RB:
-funcgraph.rb can be used within your own scritps, but you have to define INTFunx = Array.new (internal function of a lang) and Home = `echo $HOME`.chomp (for temporal file generation).
-
-PHP-FUNCTIONS:
-codegraph is able to scan for PHP's buildin functions. Therefor some files must be generated from the PHP sources of you choice:
-cd into the source directory like '/usr/local/src/php-4.3.4 and type:
-find -name "*c" -type f > ~/.codegraph/filelist
-ctags -x --c-types=f -L ~/.codegraph/filelist | grep PHP_FUNCTION | ruby -ne \'print "#{$_.split(/\(/).last.split(/\)/).first} "\' > ~/.codegraph/php-internal-funx
-
-'~/.codegraph/php-internal-funx' is a single-space-separated list of PHP's internal functions and you can find it in the examples directory (PHP4.3.4); for PERL v5.6.1 you can take the corresposnding file from same directory.
+DEVELOPMENT:
+I take codegraph as a moving target. I uses it for PHP in the beginning, but
+ctags knows a lot languages. So took over Bash and Perl, too. Now is mainly to C and Fortran. That's why I added these two to codegraph. Preprocessing a little bit tricky, but at least for C, it works (hopefully).
+If you have any kind of feature wished, please let me know.
 
 THANKS:
 Horst Duchene, developer of the Ruby Graph Library
@@ -39,4 +26,4 @@ Of cource: the ruby communitiy, esp. the mailing-list users
 YOU, using codegraph
 
 CONTACT:
-Jack.Randall@web.de
+stark.dreamdetective@gmail.de
