@@ -1,0 +1,145 @@
+#!/usr/bin/env ruby
+# Which options are availabile ------------------------------------------------
+# Default settings
+  $options = {
+    :files    => [],
+    :mode     => nil,
+    :output   => "",
+    :function => "",
+    :depth    => nil,
+    :adds     => [],
+    :excludes => [],
+    :debug    => false
+  }
+
+require "codegraph"
+require "optparse"
+
+def parse(args)
+  OptionParser.new do |opts|
+    opts.banner = "Usage: codegraph [options]"
+    opts.on("-y", "--debug","Work in debuging mode") do |debug|
+      $options[:debug] = debug
+    end
+    opts.on( "-a","--add f1,f2,f3",Array,"Add function for scanning") do |adds|
+      $options[:adds] = adds
+    end
+    opts.on("-f", "--function FUNCTION") do |func|
+      $options[:function] = func
+      $options[:mode] = 'single'
+    end
+    opts.on( "-s","--show-body","Display function body") do |show|
+      $options[:mode] = 'show'
+    end
+    opts.on("-u", "--upper-funx FUNCTION") do |func|
+      $options[:function] = func
+      $options[:mode] = 'upper'
+    end
+    opts.on("-8", "--8-funx FUNCTION") do |func|
+      $options[:function] = func
+      $options[:mode] = 8
+    end
+    opts.on("-C", "--ctags-opts KIND",String) do |opts|
+      $options[:ctagsopts] = opts
+    end
+    opts.on("--match-before REGEXP",String) do |regexp|
+      $options[:matchBefore] = regexp
+    end
+    opts.on("--match-after REGEXP",String) do |regexp|
+      $options[:matchAfter] = regexp
+    end
+    opts.on("-F", "--file-list file0,file1,file3", Array,"List of files (alternative \"file0 file1 file3\")") do |filelist|
+      filelist.each do |filedesc|
+        unless File.exist?(filedesc)
+          $options[:files] << Dir.glob(File.expand_path(filedesc))
+        else
+          $options[:files] = filelist
+        end
+      end
+      $options[:files].flatten!
+    end
+    opts.on("-d", "--depth DEPTH","Set the maximum depth of the graph") do |depth|
+      $options[:depth] = depth
+    end
+    opts.on("-p", "--to-ps FILE", "Write Postscripts output file") do |ofile|
+      $options[:ofile] = ofile
+      $options[:output] = 'ps'
+    end
+    opts.on("-S", "--to-svg FILE", "Write Scalable Vector Graphic output file") do |ofile|
+      $options[:ofile] = ofile
+      $options[:output] = 'svg'
+    end
+    opts.on("-P", "--to-png FILE", "Write Portable Network Graphic output file") do |ofile|
+      $options[:ofile] = ofile
+      $options[:output] = 'png'
+    end
+    opts.on("-J", "--to-jpg FILE", "Write JPEG output file") do |ofile|
+      $options[:ofile] = ofile
+      $options[:output] = 'jpg'
+    end
+    opts.on("-D", "--to-dot FILE", "Write dot output file") do |ofile|
+      $options[:ofile] = ofile
+      $options[:output] = 'dot'
+    end
+    opts.on("-T", "--to-txt","Write to stdout") do 
+      $options[:output] = 'txt'
+    end
+    opts.on("-V", "--version","Print version") do 
+      puts Codegraph::VERSION
+      exit
+    end
+    opts.on_tail("-h", "--help","Showthis message") do
+      puts opts
+      exit
+    end
+  end.parse(args)
+
+  if $options[:files].flatten.empty?
+    warn 'Please use -F do define input files! Use -h for further help.'
+    exit
+  end
+  $options
+end
+options = parse(ARGV)
+pp options if $options[:debug]
+#   ["--exclude",       "-x", GetoptLong::REQUIRED_ARGUMENT],
+#)
+# What kind of graph should be generated?
+case $options[:mode]
+when "upper"
+   g = UpperFunctionGraph.new($options[:function])
+when "single","show"
+   g = SingleFunctionGraph.new($options[:function])
+when 8
+   g = EightFunctionGraph.new($options[:function])
+else
+   g = FunctionGraph.new
+end
+
+# Set debug mode
+g.debug = $options[:debug]
+
+# Include additional functions?
+g.adds = $options[:adds]
+
+# Creates the Knodes/Edges of the graph
+g.fill($options[:files],$options[:excludes])
+
+# Remove edges 
+g.limit($options[:depth]) if $options[:depth]
+
+# What sort of output should be created?
+case $options[:output]
+when "ps", "svg", "png", "jpg"
+  g.to_type($options[:ofile],$options[:output])
+when "dot"
+  g.to_dot($options[:ofile])
+when "txt"
+  g.to_txt
+else 
+  if $options[:mode] == "show"
+    puts g.display_functionbody($options[:function])
+  else
+    g.display
+  end
+end
