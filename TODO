@@ -1,0 +1,8 @@
+Codegraph:
+  refactor (branch refactor4-0.8)
+  general imrovements:
+    accept multiple wildcards in -F options
+    determine the requirements (CC,FC,CPP,FPP,CTAGS,...) AND test their presence
+
+  new options:
+    check input files on available language elements
