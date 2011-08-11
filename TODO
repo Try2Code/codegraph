@@ -1,3 +1,4 @@
+HEAD:
 Codegraph:
   refactor (branch refactor4-0.8)
   general imrovements:
@@ -6,3 +7,19 @@ Codegraph:
 
   new options:
     check input files on available language elements
+
+branch refactor4-0.8:
+
+Split (1) Parsing files from (2) Creating graphs from their lexical structure
+
+Parser:
+  in: single file
+  out: lexical struct, maybe a hash
+
+  analyze ideas:
+    make a full scan with ctags to get all available element types, e.g. functions, modules, structs...
+    -> resulting graph knodes can be taged to of a certain type
+    -> user could select certain type for graphical representation, e.g. module dependencies vs. subroutine deps in fortran or just list members of C-structs
+
+  implementation ideas:
+    use ctags options for scanning on certain language elements (e.g. --f-kinds=sm) to reduce the amount of work (instead of selection elements after a full scan)
