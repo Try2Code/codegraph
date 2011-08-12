@@ -96,7 +96,7 @@ def parse(args)
 
   if $options[:files].flatten.empty?
     warn 'Please use -F do define input files! Use -h for further help.'
-    exit
+    exit -1
   end
   $options
 end

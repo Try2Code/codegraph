@@ -97,8 +97,8 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       threads.each {|t| t.join}
 
       if @funx.empty?
-         puts "no functions found"
-         exit
+         warn "no functions found"
+         exit -1
       end
    end
    
@@ -198,8 +198,8 @@ class SingleFunctionGraph < FunctionGraph
       else
          names = graph.funx.keys
          if not names.include?(func)
-            puts "Function #{func} not found."
-            exit
+            warn "Function #{func} not found."
+            exit -1
          end
          @scannednames << f
          body = graph.funx[f]
@@ -226,7 +226,7 @@ class UpperFunctionGraph < SingleFunctionGraph
             warn "Function '#{func}' not found. If this is an internal function, " +
                  "please try again with the '-w' option to include the internal " +
                  "funx before scanning."
-            exit
+            exit -1
          end
          @scannednames << func
          graph.funx.each_pair {|g,gbody|
