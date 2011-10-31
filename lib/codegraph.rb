@@ -128,7 +128,6 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
    # fill the graph with all functions found in <filelist> 
    # while all functions from <exclude> aren't recognized
    def fill(filelist,exclude=[])
-     threads = []
       # generate the necessary files and fill @funx
       genFiles(self,filelist,exclude)
 
