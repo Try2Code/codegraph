@@ -6,6 +6,7 @@ require 'rgl/traversal'
 require 'thread'
 require 'digest'
 require 'asciify'
+require 'json'
 
 module Codegraph
   VERSION = '0.7.16'
@@ -26,8 +27,8 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
 
    @@home        = ENV['HOME']
    @@codehomedir = "#{@@home}/.codegraph"
-   @@filesDB     = @@codehomedir+'/filesDB.yaml'
-   @@funxDB      = @@codehomedir+'/funxDB.yaml'
+   @@filesDB     = @@codehomedir+'/filesDB.json'
+   @@funxDB      = @@codehomedir+'/funxDB.json'
 
    @@matchBeforFuncName = $options[:matchBefor].nil? ? '[^A-z0-9_]\s*': $options[:matchBefor]
    @@matchAfterFuncName = $options[:matchAfter].nil? ? '( *\(| |$)'   : $options[:matchAfter]
@@ -45,9 +46,9 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       # the following attribute will hold the functionnames and their bodies
       @funx    = Hash.new
       @lock    = Mutex.new
-      @filesDB = File.exist?(@@filesDB) ? YAML.load_file(@@filesDB) : Hash.new
+      @filesDB = File.exist?(@@filesDB) ? JSON.parse(File.open(@@filesDB).read) : Hash.new
       @filesCk = @db.hash
-      @funxDB  = File.exist?(@@funxDB) ? YAML.load_file(@@funxDB) : Hash.new
+      @funxDB  = File.exist?(@@funxDB) ? JSON.parse(File.open(@@funxDB).read) : Hash.new
       @funxCk  = @funxDB.hash
 
       @adds, @excludes = [],[]
@@ -112,7 +113,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       threads.each {|t| t.join}
 
       # update the code database in case of anything new
-      File.open(@@filesDB,"w") {|f| f << YAML.dump(@filesDB)} unless @filesCk == @filesDB.hash
+      updateFilesDB
 
       if @funx.empty?
          warn "no functions found"
@@ -132,14 +133,31 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       @funx.each_pair {|name,body|
 #        threads << Threads.new(name,body,names) {|name,body|
           puts "Add func: #{name}" if @debug
-          add_vertex(name)
-          (names - [name] + @adds).each { |func|
-            puts body if @debug and false
-            add_edge("#{name}","#{func}") if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
-          }
+          # Check if this body is in the funx DB
+          bodyCk = Digest::SHA256.hexdigest(body)
+          if @funxDB.has_key?(bodyCk) and @funxDB[name] == body
+            edges = @funxDB[bodyCk]
+            edges.each {|edge| add_edge(*edge)}
+          else
+            edges = []
+            add_vertex(name)
+            (names - [name] + @adds).each { |func|
+              puts body if @debug and false
+              if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
+                edge = ["#{name}","#{func}"]
+                add_edge(*edge)
+                edges << edge
+              end
+            }
+#            @lock.synchronize { 
+              @funxDB[bodyCk] = edges
+              @funxDB[name]   = body
+#            }
+          end
         }
 #      }
 #      threads.each {|t| t.join}
+     updateFunxDB
    end
 
    def limit(depth)
@@ -187,7 +205,14 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       dotty(Params)
       system("rm graph.dot") if File.exist?("graph.dot")
    end
-   private :genFiles
+
+   def updateFilesDB
+      File.open(@@filesDB,"w") {|f| f << JSON.generate(@filesDB)} unless @filesCk == @filesDB.hash
+   end
+   def updateFunxDB
+      File.open(@@funxDB,"w") {|f| f << JSON.generate(@funxDB)} unless @funxCk == @filesDB.hash
+   end
+   private :genFiles,:updateFilesDB,:updateFunxDB
 end
 
 class SingleFunctionGraph < FunctionGraph
