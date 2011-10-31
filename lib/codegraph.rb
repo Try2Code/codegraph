@@ -9,7 +9,7 @@ require 'asciify'
 require 'json'
 
 module Codegraph
-  VERSION = '0.7.16'
+  VERSION = '0.7.17'
 end
 
 class FunctionGraph < RGL::DirectedAdjacencyGraph
@@ -30,7 +30,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
    @@filesDB     = @@codehomedir+'/filesDB.json'
    @@funxDB      = @@codehomedir+'/funxDB.json'
 
-   @@matchBeforFuncName = $options[:matchBefor].nil? ? '[^A-z0-9_]\s*': $options[:matchBefor]
+   @@matchBeforFuncName = $options[:matchBefor].nil? ? '[^A-z0-9_]( *)': $options[:matchBefor]
    @@matchAfterFuncName = $options[:matchAfter].nil? ? '( *\(| |$)'   : $options[:matchAfter]
 
    @@map = Asciify::Mapping.new(:default) 
@@ -146,8 +146,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
             edges = []
             add_vertex(name)
             (names - [name] + @adds).each { |func|
-              puts body if @debug and false
-              puts func
+              puts name if @debug
               if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
                 edge = ["#{name}","#{func}"]
                 add_edge(*edge)
