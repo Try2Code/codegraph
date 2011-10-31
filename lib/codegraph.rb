@@ -32,7 +32,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
 
    @@matchBeforFuncName = $options[:matchBefor].nil? ? '[^A-z0-9_]\s*': $options[:matchBefor]
    @@matchAfterFuncName = $options[:matchAfter].nil? ? '( *\(| |$)'   : $options[:matchAfter]
-#   @@matchAfterFuncName = '[^(<]'
+
    @@map = Asciify::Mapping.new(:default) 
    
    # Generate the codegraph storage directory
@@ -95,6 +95,10 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
             code          = open(codehomedir+'/'+ File.basename(file)).readlines
             funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
             @lock.synchronize { @filesDB[checksum] = [code,funxLocations] }
+
+            # cleanup
+            FileUtils.rm("#{codehomedir}/#{tempfile}")
+            FileUtils.rm("#{codehomedir}/#{basefile}")
           end
 
           funxLocations.each_with_index {|ary,i|
@@ -131,7 +135,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       # scan functions for the function names
       names = @funx.keys
       @funx.each_pair {|name,body|
-#        threads << Threads.new(name,body,names) {|name,body|
+#        threads=[];threads << Thread.new(name,body,names) {|name,body,names|
           puts "Add func: #{name}" if @debug
           # Check if this body is in the funx DB
           bodyCk = Digest::SHA256.hexdigest(body)
@@ -143,6 +147,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
             add_vertex(name)
             (names - [name] + @adds).each { |func|
               puts body if @debug and false
+              puts func
               if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
                 edge = ["#{name}","#{func}"]
                 add_edge(*edge)
@@ -154,9 +159,9 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
               @funxDB[name]   = body
 #            }
           end
-        }
-#      }
-#      threads.each {|t| t.join}
+#        }
+      }
+      threads.each {|t| t.join}
      updateFunxDB
    end
 
