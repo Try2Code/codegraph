@@ -4,10 +4,11 @@ require 'rgl/dot'
 require 'rgl/rdot'
 require 'rgl/traversal'
 require 'thread'
+require 'digest'
 require 'asciify'
 
 module Codegraph
-  VERSION = '0.7.15'
+  VERSION = '0.7.16'
 end
 
 class FunctionGraph < RGL::DirectedAdjacencyGraph
@@ -23,8 +24,11 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
              'label'       => '',
              'fontsize'    => '12'}
 
-   @@home               = `echo $HOME`.chomp
-   @@codehomedir        = "#{@@home}/.codegraph"
+   @@home        = ENV['HOME']
+   @@codehomedir = "#{@@home}/.codegraph"
+   @@filesDB     = @@codehomedir+'/filesDB.yaml'
+   @@funxDB      = @@codehomedir+'/funxDB.yaml'
+
    @@matchBeforFuncName = $options[:matchBefor].nil? ? '[^A-z0-9_]\s*': $options[:matchBefor]
    @@matchAfterFuncName = $options[:matchAfter].nil? ? '( *\(| |$)'   : $options[:matchAfter]
 #   @@matchAfterFuncName = '[^(<]'
@@ -37,10 +41,14 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
 
    def initialize
       super
-      @debug = false
+      @debug   = false
       # the following attribute will hold the functionnames and their bodies
-      @funx = Hash.new
-      @lock = Mutex.new
+      @funx    = Hash.new
+      @lock    = Mutex.new
+      @filesDB = File.exist?(@@filesDB) ? YAML.load_file(@@filesDB) : Hash.new
+      @filesCk = @db.hash
+      @funxDB  = File.exist?(@@funxDB) ? YAML.load_file(@@funxDB) : Hash.new
+      @funxCk  = @funxDB.hash
 
       @adds, @excludes = [],[]
    end
@@ -55,32 +63,39 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       filelist.each {|file|
         threads << Thread.new(file, @@codehomedir) {|file,codehomedir|
           funxFile   = "funxnames"
-          ctagsKinds = $options[:ctagsopts].nil? ? '--c-kinds=f --fortran-kinds=fsp --php-kinds=f --perl-kinds=f' : $options[:ctagsopts]
+          ctagsKinds = $options[:ctagsopts].nil? ? '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f' : $options[:ctagsopts]
 
           puts "Processing #{file} ..." if @debug
-          basefile   = File.basename(file)
-          temfile    = "_" + basefile
-          case File.extname(file)
-          when '.c','.h' 
-            cppCommand = "cpp -w -fpreprocessed -E  -fdirectives-only #{file}  -o #{codehomedir}/#{temfile} 2>/dev/null"
-            cppCommand = "cpp -fpreprocessed #{file}  -o #{codehomedir}/#{temfile} 2>/dev/null"
-            grep       = "grep -v -e '^$' #{codehomedir}/#{temfile} | grep -v -e '^#' > #{codehomedir}/#{basefile}"
-          when '.f','.f77','.f90','.f95'
-            cppCommand = "cp #{file} #{codehomedir}/#{temfile}"
-            grep       = "grep -v -e '^$' #{codehomedir}/#{temfile} | grep -v -e '^ *!' > #{codehomedir}/#{basefile}"
+          checksum = Digest::SHA256.file(file).hexdigest
+          if @filesDB.has_key?(checksum)
+            code,funxLocations = @filesDB[checksum]
           else
-            cppCommand = "cp #{file} #{codehomedir}/#{temfile}"
-            grep       = "grep -v -e '^$' #{codehomedir}/#{temfile} | grep -v -e '^#' > #{codehomedir}/#{basefile}"
+            basefile = File.basename(file)
+            tempfile = "_" + basefile
+            case File.extname(file)
+            when '.c','.h' 
+              cppCommand = "cpp -w -fpreprocessed -E  -fdirectives-only #{file}  -o #{codehomedir}/#{tempfile} 2>/dev/null"
+              cppCommand = "cpp -fpreprocessed #{file}  -o #{codehomedir}/#{tempfile} 2>/dev/null"
+              grep       = "grep -v -e '^$' #{codehomedir}/#{tempfile} | grep -v -e '^#' > #{codehomedir}/#{basefile}"
+            when '.f','.f77','.f90','.f95'
+              cppCommand = "cp #{file} #{codehomedir}/#{tempfile}"
+              grep       = "grep -v -e '^$' #{codehomedir}/#{tempfile} | grep -v -e '^ *!' > #{codehomedir}/#{basefile}"
+            else
+              cppCommand = "cp #{file} #{codehomedir}/#{tempfile}"
+              grep       = "grep -v -e '^$' #{codehomedir}/#{tempfile} | grep -v -e '^#' > #{codehomedir}/#{basefile}"
+            end
+            gen4ctags  = "ctags -x #{ctagsKinds}  #{codehomedir}/#{basefile} | sort -n -k 3"
+            command    = [cppCommand,grep].join(";")
+
+            puts gen4ctags if @debug
+            puts command if @debug
+            system(command)
+
+            code          = open(codehomedir+'/'+ File.basename(file)).readlines
+            funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
+            @lock.synchronize { @filesDB[checksum] = [code,funxLocations] }
           end
-          gen4ctags  = "ctags -x #{ctagsKinds}  #{codehomedir}/#{basefile} | sort -n -k 3"
-          command    = [cppCommand,grep].join(";")
 
-          puts gen4ctags if @debug
-          puts command if @debug
-          system(command)
-
-          code = open(codehomedir+'/'+ File.basename(file)).readlines
-          funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
           funxLocations.each_with_index {|ary,i|
             name, kind, line, file = ary
             puts name if @debug
@@ -95,6 +110,9 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
         }
       }
       threads.each {|t| t.join}
+
+      # update the code database in case of anything new
+      File.open(@@filesDB,"w") {|f| f << YAML.dump(@filesDB)} unless @filesCk == @filesDB.hash
 
       if @funx.empty?
          warn "no functions found"
