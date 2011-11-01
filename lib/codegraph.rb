@@ -9,7 +9,7 @@ require 'asciify'
 require 'json'
 
 module Codegraph
-  VERSION = '0.7.17'
+  VERSION = '0.7.18'
 end
 
 class FunctionGraph < RGL::DirectedAdjacencyGraph
@@ -131,45 +131,48 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       # generate the necessary files and fill @funx
       genFiles(self,filelist,exclude)
 
-      # scan functions for the function names
-      names = @funx.keys
-      @funx.each_pair {|name,body|
-#        threads=[];threads << Thread.new(name,body,names) {|name,body,names|
-          puts "Add func: #{name}" if @debug
-          # Check if this body is in the funx DB
-          bodyCk = Digest::SHA256.hexdigest(body)
-          if @funxDB.has_key?(bodyCk) and @funxDB[name] == body
-            edges = @funxDB[bodyCk]
-            edges.each {|edge| add_edge(*edge)}
-          else
-            edges = []
-            add_vertex(name)
-            (names - [name] + @adds).each { |func|
-              puts name if @debug
-              if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
-                edge = ["#{name}","#{func}"]
-                add_edge(*edge)
-                edges << edge
-              end
-            }
-#            @lock.synchronize { 
-              @funxDB[bodyCk] = edges
-              @funxDB[name]   = body
-#            }
-          end
-#        }
-      }
-      threads.each {|t| t.join}
+      scan
+   end
+   def scan
+    # scan functions for the function names
+    names = @funx.keys
+    @funx.each_pair {|name,body|
+#      threads=[];threads << Thread.new(name,body,names) {|name,body,names|
+        puts "Add func: #{name}" if @debug
+        # Check if this body is in the funx DB
+        bodyCk = Digest::SHA256.hexdigest(body)
+        if @funxDB.has_key?(bodyCk) and @funxDB[name] == body
+          edges = @funxDB[bodyCk]
+          edges.each {|edge| add_edge(*edge)}
+        else
+          edges = []
+          add_vertex(name)
+          (names - [name] + @adds).each { |func|
+            puts name if @debug
+            if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
+              edge = ["#{name}","#{func}"]
+              add_edge(*edge)
+              edges << edge
+            end
+          }
+#          @lock.synchronize { 
+            @funxDB[bodyCk] = edges
+            @funxDB[name]   = body
+#          }
+        end
+#      }
+    }
+#   threads.each {|t| t.join}
      updateFunxDB
    end
 
-   def limit(depth)
-     dv = RGL::DFSVisitor.new(self)
-     dv.attach_distance_map
-     self.depth_first_search(dv) {|u|
-       self.remove_vertex(u) if dv.distance_to_root(u) > depth
-     }
-   end
+  def limit(depth)
+    dv = RGL::DFSVisitor.new(self)
+    dv.attach_distance_map
+    self.depth_first_search(dv) {|u|
+      self.remove_vertex(u) if dv.distance_to_root(u) > depth
+    }
+  end
 
   def display_functionbody(name)
     @funx[name]
