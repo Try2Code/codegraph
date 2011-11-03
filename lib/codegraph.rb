@@ -30,7 +30,8 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
    @@filesDB     = @@codehomedir+'/filesDB.json'
    @@funxDB      = @@codehomedir+'/funxDB.json'
 
-   @@matchBeforFuncName = $options[:matchBefor].nil? ? '[^A-z0-9_]( *)': $options[:matchBefor]
+   @@matchBeforFuncName = $options[:matchBefor].nil? ? '[^A-z0-9_]\s*': $options[:matchBefor]
+
    @@matchAfterFuncName = $options[:matchAfter].nil? ? '( *\(| |$)'   : $options[:matchAfter]
 
    @@map = Asciify::Mapping.new(:default) 
@@ -97,8 +98,8 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
             @lock.synchronize { @filesDB[checksum] = [code,funxLocations] }
 
             # cleanup
-            FileUtils.rm("#{codehomedir}/#{tempfile}")
-            FileUtils.rm("#{codehomedir}/#{basefile}")
+            FileUtils.rm("#{codehomedir}/#{tempfile}") unless @debug
+            FileUtils.rm("#{codehomedir}/#{basefile}") unless @debug
           end
 
           funxLocations.each_with_index {|ary,i|
@@ -128,10 +129,8 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
    # fill the graph with all functions found in <filelist> 
    # while all functions from <exclude> aren't recognized
    def fill(filelist,exclude=[])
-      # generate the necessary files and fill @funx
-      genFiles(self,filelist,exclude)
-
-      scan
+     genFiles(self,filelist,exclude)
+     scan
    end
    def scan
     # scan functions for the function names
@@ -236,31 +235,43 @@ class SingleFunctionGraph < FunctionGraph
    # Works like the one from FunctionGraph except, that it calls 'scan' 
    # for the recursive descent throug all functions given in <filelist> - exclude
    def fill(filelist,exclude=[])
-      genFiles(self,filelist,exclude)
-      scan(self, func)
+     genFiles(self,filelist,exclude)
+     scan(self, func)
+     updateFunxDB
    end
 
    # For the given root function f, scan walks through the graph, and finds any
    # other function, that calls f
    def scan(graph,f)
-      if (@scannednames.include?(f)) 
-      else
-         names = graph.funx.keys
-         if not names.include?(func)
-            warn "Function #{func} not found."
-            exit -1
-         end
-         @scannednames << f
-         body = graph.funx[f]
+     if (@scannednames.include?(f)) 
+     else
+       names = graph.funx.keys
+       if not names.include?(func)
+         warn "Function #{func} not found."
+         exit -1
+       end
+       @scannednames << f
+       body   = graph.funx[f]
+       bodyCk = Digest::SHA256.hexdigest(body)
+#       if @funxDB.has_key?(bodyCk) and @funxDB[f] == body
+#         edges = @funxDB[bodyCk]
+#         edges.each {|edge| add_edge(*edge)}
+#         (edges.flatten.uniq-[f]).each {|g| scan(graph,g)}
+#       else
+         edges = []
          # scan for any other function in the body of f
          (names - [f] + @adds).each {|g|
-            if /#@@matchBeforFuncName#{g}#@@matchAfterFuncName/.match(body) 
-               graph.add_edge(f,g)
-               # go downstairs for all functions from the scanned files
-               scan(graph,g) if names.include?(g)
-            end
+           if /#@@matchBeforFuncName#{g}#@@matchAfterFuncName/.match(body) 
+             graph.add_edge(f,g)
+             edges << [f,g]
+             # go downstairs for all functions from the scanned files
+             scan(graph,g) if names.include?(g)
+           end
          }
-      end
+#         @funxDB[bodyCk] = edges
+#         @funxDB[f]      = body
+#       end
+     end
    end
    private :scan
 end
