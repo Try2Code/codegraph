@@ -12,6 +12,11 @@ module Codegraph
   VERSION = '0.7.18'
 end
 
+class CodeParser
+  def initialize(file)
+  end
+end
+
 class FunctionGraph < RGL::DirectedAdjacencyGraph
    attr_accessor :funx, :adds, :excludes, :debug
 
@@ -104,6 +109,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
 
           funxLocations.each_with_index {|ary,i|
             name, kind, line, file = ary
+            next if exclude.include?(name)
             puts name if @debug
             line           = line.to_i
             startLineIndex = line - 1
@@ -246,6 +252,10 @@ class SingleFunctionGraph < FunctionGraph
      if (@scannednames.include?(f)) 
      else
        names = graph.funx.keys
+       if names.include?('*') then
+         puts 'body of *:'
+         puts graph.funx['*']
+       end
        if not names.include?(func)
          warn "Function #{func} not found."
          exit -1

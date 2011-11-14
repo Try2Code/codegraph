@@ -24,6 +24,9 @@ def parse(args)
     opts.on( "-a","--add f1,f2,f3",Array,"Add function for scanning") do |adds|
       $options[:adds] = adds
     end
+    opts.on( "-x","--exclude f1,f2,f3",Array,"Exclude function from scanning") do |excludes|
+      $options[:excludes] = excludes
+    end
     opts.on("-f", "--function FUNCTION") do |func|
       $options[:function] = func
       $options[:mode] = 'single'
@@ -102,8 +105,7 @@ def parse(args)
 end
 options = parse(ARGV)
 pp options if $options[:debug]
-#   ["--exclude",       "-x", GetoptLong::REQUIRED_ARGUMENT],
-#)
+
 # What kind of graph should be generated?
 case $options[:mode]
 when "upper"
