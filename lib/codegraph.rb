@@ -13,7 +13,48 @@ module Codegraph
 end
 
 class CodeParser
-  def initialize(file)
+  @@ctagsOpts = '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f'
+  @@workDir   = ENV['HOME'] + '/.fileParser'
+  @@filesDB   = 'filesDB.json'
+
+  def initialize(file,dir="#{ENV['HOME']}/.codegraph")
+    @debug = false
+    ctagsKinds = $options[:ctagsopts].nil? ? '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f' : $options[:ctagsopts]
+
+    puts "Processing #{file} ..." if @debug
+    checksum = Digest::SHA256.file(file).hexdigest
+    if @filesDB.has_key?(checksum)
+      code,funxLocations = @filesDB[checksum]
+    else
+      basefile = File.basename(file)
+      tempfile = "_" + basefile
+      case File.extname(file)
+      when '.c','.h'
+        cppCommand = "cpp -w -fpreprocessed -E  -fdirectives-only #{file}  -o #{dir}/#{tempfile} 2>/dev/null"
+        cppCommand = "cpp -fpreprocessed #{file}  -o #{dir}/#{tempfile} 2>/dev/null"
+        grep       = "grep -v -e '^$' #{dir}/#{tempfile} | grep -v -e '^#' > #{dir}/#{basefile}"
+      when '.f','.f77','.f90','.f95'
+        cppCommand = "cp #{file} #{dir}/#{tempfile}"
+        grep       = "grep -v -e '^$' #{dir}/#{tempfile} | grep -v -e '^ *!' > #{dir}/#{basefile}"
+      else
+        cppCommand = "cp #{file} #{dir}/#{tempfile}"
+        grep       = "grep -v -e '^$' #{dir}/#{tempfile} | grep -v -e '^#' > #{dir}/#{basefile}"
+      end
+      gen4ctags  = "ctags -x #{ctagsKinds}  #{dir}/#{basefile} | sort -n -k 3"
+      command    = [cppCommand,grep].join(";")
+
+      puts gen4ctags if @debug
+      puts command if @debug
+      system(command)
+
+      code          = open(dir+'/'+ File.basename(file)).readlines
+      funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
+      @lock.synchronize { @filesDB[checksum] = [code,funxLocations] }
+
+      # cleanup
+      FileUtils.rm("#{dir}/#{tempfile}") unless @debug
+      FileUtils.rm("#{dir}/#{basefile}") unless @debug
+    end
   end
 end
 
@@ -69,7 +110,6 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
 
       filelist.each {|file|
         threads << Thread.new(file, @@codehomedir) {|file,codehomedir|
-          funxFile   = "funxnames"
           ctagsKinds = $options[:ctagsopts].nil? ? '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f' : $options[:ctagsopts]
 
           puts "Processing #{file} ..." if @debug
