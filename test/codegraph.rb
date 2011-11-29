@@ -35,9 +35,6 @@ FORTRAN_structs  = {
   }
 }
 
-
-
-
 class TestCodeParser < Test::Unit::TestCase
 
   thisdir     = FileUtils.pwd
