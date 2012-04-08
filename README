@@ -8,6 +8,8 @@ function is found, it generates a single knode.  'codegraph' needs the
 directory $HOME/.codegraph for some files. You can generate is manually or
 'codegraph' will do this for you, when it's started the first time.
 
+homepage: http://codegraph.rubyforge.org
+
 DOCUMENTATION:
 For technical issues I recommend to use 'rdoc -a'. Otherwise use the man page
 or just  type "codegraph --help".
