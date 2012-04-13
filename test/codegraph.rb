@@ -2,6 +2,7 @@ $:.unshift File.join(File.dirname(__FILE__),"..","lib")
 require "test/unit"
 require "codegraph"
 require "thread"
+require "pp"
 
 FORTRAN_SOURCE_0 = "test.f90"
 FORTRAN_SOURCE_1 = "module_B.f90"
@@ -62,6 +63,7 @@ class TestCodeParser < Test::Unit::TestCase
   def test_CodeParser
     cp = CodeParser.new
     cp.read(@@test0_f90)
+    pp cp
     assert_equal(elementsOf(@@test0_f90), cp.funxLocations.transpose[0])
     assert_equal(typesOf(@@test0_f90),cp.funxLocations.transpose[1])
     assert_equal(linesOf(@@test0_f90),cp.funxLocations.transpose[2])

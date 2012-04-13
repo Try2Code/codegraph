@@ -5,7 +5,6 @@ require 'rgl/rdot'
 require 'rgl/traversal'
 require 'thread'
 require 'digest'
-require 'asciify'
 require 'json'
 require 'fileutils'
 
@@ -92,6 +91,7 @@ class CodeParser
   def updateFilesDB
      File.open(@@filesDBfile,"w") {|f| f << JSON.generate(@@filesDB)} unless @@filesCk == @@filesDB.hash
   end
+  private :updateFilesDB
 end
 
 class FunctionGraph < RGL::DirectedAdjacencyGraph
@@ -112,19 +112,15 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
    @@filesDB     = @@codehomedir+'/filesDB.json'
    @@funxDB      = @@codehomedir+'/funxDB.json'
 
-   @@matchBeforFuncName = $options[:matchBefor].nil? ? '[^A-z0-9_]\s*': $options[:matchBefor]
-
-   @@matchAfterFuncName = $options[:matchAfter].nil? ? '( *\(| |$)'   : $options[:matchAfter]
-
-   @@map = Asciify::Mapping.new(:default) 
-   
    # Generate the codegraph storage directory
    if not FileTest.directory?(@@codehomedir) 
       system("mkdir #{@@codehomedir}")
    end
 
-   def initialize
+   def initialize(config)
       super
+      @config  = config 
+
       @debug   = false
       # the following attribute will hold the functionnames and their bodies
       @funx    = Hash.new
@@ -133,6 +129,9 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       @filesCk = @db.hash
       @funxDB  = File.exist?(@@funxDB) ? JSON.parse(File.open(@@funxDB).read) : Hash.new
       @funxCk  = @funxDB.hash
+
+      @@matchBeforFuncName = @config[:matchBefor].nil? ? '[^A-z0-9_]\s*': @config[:matchBefor]
+      @@matchAfterFuncName = @config[:matchAfter].nil? ? '( *\(| |$)'   : @config[:matchAfter]
 
       @adds, @excludes = [],[]
    end
@@ -146,7 +145,8 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
 
       filelist.each {|file|
         threads << Thread.new(file, @@codehomedir) {|file,codehomedir|
-          ctagsKinds = $options[:ctagsopts].nil? ? '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f' : $options[:ctagsopts]
+          ctagsKinds = @config[:ctagsopts].nil? ? '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f' \
+                                                : @config[:ctagsopts]
 
           puts "Processing #{file} ..." if @debug
           checksum = Digest::SHA256.file(file).hexdigest
@@ -296,7 +296,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
    def updateFunxDB
       File.open(@@funxDB,"w") {|f| f << JSON.generate(@funxDB)} unless @funxCk == @filesDB.hash
    end
-   private :genFiles,:updateFilesDB,:updateFunxDB
+   private :genFiles,:updateFunxDB
 end
 
 class SingleFunctionGraph < FunctionGraph
@@ -377,7 +377,7 @@ class UpperFunctionGraph < SingleFunctionGraph
             next if g == func
             puts g if @debug
             puts gbody if @debug
-            if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(Asciify.new(@@map).convert(gbody))
+            if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(gbody)
                graph.add_edge(g,func)
                scan(graph,g)
             end

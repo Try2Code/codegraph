@@ -109,13 +109,13 @@ pp options if $options[:debug]
 # What kind of graph should be generated?
 case $options[:mode]
 when "upper"
-   g = UpperFunctionGraph.new($options[:function])
+   g = UpperFunctionGraph.new($options)
 when "single","show"
-   g = SingleFunctionGraph.new($options[:function])
+   g = SingleFunctionGraph.new($options)
 when 8
-   g = EightFunctionGraph.new($options[:function])
+   g = EightFunctionGraph.new($options)
 else
-   g = FunctionGraph.new
+   g = FunctionGraph.new($options)
 end
 
 # Set debug mode
