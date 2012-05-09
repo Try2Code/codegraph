@@ -124,16 +124,10 @@ g.debug = $options[:debug]
 # Include additional functions?
 g.adds = $options[:adds]
 
-# Creates the Knodes/Edges of the graph
-g.fill($options[:files],$options[:excludes])
-
-# Remove edges 
-g.limit($options[:depth]) if $options[:depth]
-
 # What sort of output should be created?
 case $options[:output]
 when "ps", "svg", "png", "jpg"
-  g.to_type($options[:ofile],$options[:output])
+  g.save($options[:ofile],$options[:output])
 when "dot"
   g.to_dot($options[:ofile])
 when "txt"

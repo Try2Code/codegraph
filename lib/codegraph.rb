@@ -109,7 +109,7 @@ class FunctionGraph < Graph
     super(self.class.to_s)
     @config  = config 
 
-    @debug   = false
+    @debug   = @config[:debug]
     # the following attribute will hold the functionnames and their bodies
     @parser  = CodeParser.new
 
@@ -172,20 +172,13 @@ class SingleFunctionGraph < FunctionGraph
   attr_accessor  :func
 
   # Constructor, which creates an empty graph for the rootfunction <func>
-  def initialize(func)
+  def initialize(config)
+    super(config)
     # Holds the func'n names, that are allready scanned
     @scannednames = []
     # Root func
-    @func = func
-    super()
-  end
-
-  # Works like the one from FunctionGraph except, that it calls 'scan' 
-  # for the recursive descent throug all functions given in <filelist> - exclude
-  def fill(filelist,exclude=[])
-    genFiles(self,filelist,exclude)
-    scan(self, func)
-    updateFunxDB
+    @func = @config[:func]
+    scan(self,@func)
   end
 
   # For the given root function f, scan walks through the graph, and finds any
@@ -214,7 +207,7 @@ class SingleFunctionGraph < FunctionGraph
       # scan for any other function in the body of f
       (names - [f] + @adds).each {|g|
         if /#@@matchBeforFuncName#{g}#@@matchAfterFuncName/.match(body) 
-          graph.add_edge(f,g)
+          graph.edge(f,g)
           edges << [f,g]
           # go downstairs for all functions from the scanned files
           scan(graph,g) if names.include?(g)
@@ -247,7 +240,7 @@ class UpperFunctionGraph < SingleFunctionGraph
         puts g if @debug
         puts gbody if @debug
         if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(gbody)
-          graph.add_edge(g,func)
+          graph.edge(g,func)
           scan(graph,g)
         end
       }

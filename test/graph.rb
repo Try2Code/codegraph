@@ -15,13 +15,29 @@ class TestGraph < Test::Unit::TestCase
   @@test0_f90 = [@@testdir,FORTRAN_SOURCE_0].join(File::SEPARATOR)
   @@test1_f90 = [@@testdir,FORTRAN_SOURCE_1].join(File::SEPARATOR)
 
-  def test_first
+  def test_funcgraph
     filelist = [@@test0_f90,@@test1_f90]
     fg = FunctionGraph.new({:filelist => filelist})
     fg.scan
-    fg.save('testfirst','png')
-    system("qiv testfirst.png") if 'thingol' == `hostname`.chomp
+    ofile = 'testfncgraph'
+    fg.save(ofile,'png')
+    system("qiv #{ofile}.png") if 'thingol' == `hostname`.chomp
   end
+  def test_singleFG
+    filelist = [@@test0_f90,@@test1_f90]
+    sg = SingleFunctionGraph.new(:filelist => filelist,:func => 'transfer')
+    ofile = 'testsg'
+    sg.save(ofile,'png')
+    system("qiv #{ofile}.png") if 'thingol' == `hostname`.chomp
+  end
+  def test_UFG
+    filelist = [@@test0_f90,@@test1_f90]
+    sg = UpperFunctionGraph.new(:filelist => filelist,:func => 'xfer_idx_2',:debug => false)
+    ofile = 'testufg'
+    sg.save(ofile,'png')
+    system("qiv #{ofile}.png") if 'thingol' == `hostname`.chomp
+  end
+
   if `hostname`.chomp == 'thingol' then
     def test_icon
       cp = CodeParser.new
