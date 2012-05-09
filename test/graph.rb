@@ -15,24 +15,13 @@ class TestGraph < Test::Unit::TestCase
   @@test0_f90 = [@@testdir,FORTRAN_SOURCE_0].join(File::SEPARATOR)
   @@test1_f90 = [@@testdir,FORTRAN_SOURCE_1].join(File::SEPARATOR)
 
-  [:elements,:types,:lines].each {|pattern|
-    define_method(pattern) {|type,file|
-      case type
-      when 'f90'
-        FORTRAN_structs[File.basename(file)][pattern]
-      else
-        puts 'Unsupportet input type'
-        return
-      end
-    }
-
-    # create methods: elementsOf, typesOf and linesOf
-    define_method((pattern.to_s + 'Of').to_sym) {|file|
-      method(pattern).call(File.extname(file)[1..-1],file)
-    }
-  }
-
-
+  def test_first
+    filelist = [@@test0_f90,@@test1_f90]
+    cp = FunctionGraph.new({:filelist => filelist})
+    cp.scan
+    cp.save('testfirst','png')
+    system("qiv testfirst.png") if 'thingol' == `hostname`.chomp
+  end
   if `hostname`.chomp == 'thingol' then
     def test_icon
       cp = CodeParser.new
@@ -44,13 +33,5 @@ class TestGraph < Test::Unit::TestCase
       jq.run
       pp cp.funx.keys
     end
-  end
-
-  def _testAll
-    tObj, threads   = TestCdoGSL.new(:test_gsl), []
-    self.class.public_instance_methods.sort.grep(/^test_\w.*/).delete_if {|m| tObj.method(m.to_sym).arity != 0}.each {|test|
-      threads << Thread.new(test) {|_test| system("ruby test_eca.rb -n #{_test}")}
-    }
-    threads.each {|t| t.join}
-  end
+  end if false
 end

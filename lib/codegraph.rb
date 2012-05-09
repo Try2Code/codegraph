@@ -24,6 +24,9 @@ class CodeParser
   def CodeParser.filesDB
     @@filesDB
   end
+  def CodeParser.filesCk
+    @@filesCk
+  end
 
   def initialize(debug=false,dir="#{ENV['HOME']}/.codegraph")
     @dir   = dir
@@ -96,75 +99,45 @@ class CodeParser
 end
 
 class FunctionGraph < Graph
-   attr_accessor :funx, :adds, :excludes, :debug
+  attr_accessor :funx, :adds, :excludes, :debug
 
-   # Theses Parameters are used by interactive representation and for the file
-   # generation function to_dot and to_type. They can only be given for the
-   # whole graph, not for a singel node. This could be done by extending the
-   # dot.rb file of the Ruby Graph Library
-   Params = {'rankdir'     => 'LR',
-             'ranksep'     => '4.0',
-             'concentrate' => 'TRUE',
-             'label'       => '',
-             'fontsize'    => '12'}
+  @@workDir     = ENV['HOME'] + '/.codegraph'
+  @@funxDBfile = @@workDir+'/funxDB.json'
+  @@funxDB     = File.exist?(@@funxDBfile) ? JSON.parse(File.open(@@funxDBfile).read) : Hash.new
 
-   @@home        = ENV['HOME']
-   @@codehomedir = "#{@@home}/.codegraph"
-   @@filesDB     = @@codehomedir+'/filesDB.json'
-   @@funxDB      = @@codehomedir+'/funxDB.json'
+  def initialize(config)
+    super(self.class.to_s)
+    @config  = config 
 
-   # Generate the codegraph storage directory
-   if not FileTest.directory?(@@codehomedir) 
-      system("mkdir #{@@codehomedir}")
-   end
+    @debug   = false
+    # the following attribute will hold the functionnames and their bodies
+    @parser  = CodeParser.new
 
-   def initialize(config)
-      super
-      @config  = config 
+    @@matchBeforFuncName = @config[:matchBefor].nil? ? '[^A-z0-9_]\s*': @config[:matchBefor]
+    @@matchAfterFuncName = @config[:matchAfter].nil? ? '( *\(| |$)'   : @config[:matchAfter]
 
-      @debug   = false
-      # the following attribute will hold the functionnames and their bodies
-      @funx    = Hash.new
-      @lock    = Mutex.new
-      @parser  = CodeParser.new
-      @funxDB  = File.exist?(@@funxDB) ? JSON.parse(File.open(@@funxDB).read) : Hash.new
-      @funxCk  = @funxDB.hash
+    @adds, @excludes = [],[]
 
-      @@matchBeforFuncName = @config[:matchBefor].nil? ? '[^A-z0-9_]\s*': @config[:matchBefor]
-      @@matchAfterFuncName = @config[:matchAfter].nil? ? '( *\(| |$)'   : @config[:matchAfter]
-
-      @adds, @excludes = [],[]
-   end
+    @parser.read(*@config[:filelist])
+    @funx = @parser.funx
+  end
    
-   # Generates the necessary files:
-   # 1. One for the whole source code
-   # 2. One for functions inside the file 1
-   #  and fill the @funx hash
-   def genFiles(graph, filelist, exclude=[])
-     @parser.read(*filelist)
-   end
-   
-   # fill the graph with all functions found in <filelist> 
-   # while all functions from <exclude> aren't recognized
-   def fill(filelist,exclude=[])
-     genFiles(self,filelist,exclude)
-     scan
-   end
    def scan
+    #threads = []
     # scan functions for the function names
-    names = @funx.keys
-    @funx.each_pair {|name,body|
-#      threads=[];threads << Thread.new(name,body,names) {|name,body,names|
+    names = @parser.funx.keys
+    @parser.funx.each_pair {|name,body|
+    # threads << Thread.new(name,body,names) {|name,body,names|
         puts "Add func: #{name}" if @debug
         # Check if this body is in the funx DB
         bodyCk = Digest::SHA256.hexdigest(body)
-        if @funxDB.has_key?(bodyCk) and @funxDB[name] == body
-          edges = @funxDB[bodyCk]
-          edges.each {|edge| add_edge(*edge)}
+        if @@funxDB.has_key?(bodyCk) and @@funxDB[name] == body
+          edges = @@funxDB[bodyCk]
+          edges.each {|edge| self.edge(*edge)}
         else
           edges = []
           puts self.methods - Object.methods
-          self.add_vertex(name)
+          #self.add_vertex(name)
           (names - [name] + @adds).each { |func|
             puts name if @debug
             if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
@@ -173,14 +146,14 @@ class FunctionGraph < Graph
               edges << edge
             end
           }
-#          @lock.synchronize { 
-            @funxDB[bodyCk] = edges
-            @funxDB[name]   = body
-#          }
+          @lock.synchronize { 
+            @@funxDB[bodyCk] = edges
+            @@funxDB[name]   = body
+          }
         end
-#      }
+  #   }
     }
-#   threads.each {|t| t.join}
+  #threads.each {|t| t.join}
      updateFunxDB
    end
 
@@ -224,16 +197,10 @@ class FunctionGraph < Graph
       system("rm #{filename}.dot")
    end
 
-   # Display the graph with an interactive viewer
-   def display
-      dotty(Params)
-      system("rm graph.dot") if File.exist?("graph.dot")
-   end
-
    def updateFunxDB
-      File.open(@@funxDB,"w") {|f| f << JSON.generate(@funxDB)} unless @funxCk == @filesDB.hash
+      File.open(@@funxDBfile,"w") {|f| f << JSON.generate(@@funxDB)}# unless @funxCk == @parser.filesCk
    end
-   private :genFiles,:updateFunxDB
+   private :updateFunxDB
 end
 
 class SingleFunctionGraph < FunctionGraph
