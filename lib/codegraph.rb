@@ -1,12 +1,9 @@
-require 'pp'
-require 'rgl/adjacency'
-require 'rgl/dot'
-require 'rgl/rdot'
-require 'rgl/traversal'
 require 'thread'
+require 'graph'
 require 'digest'
 require 'json'
 require 'fileutils'
+require 'pp'
 
 
 module Codegraph
@@ -23,6 +20,10 @@ class CodeParser
   @@filesDB     = File.exist?(@@filesDBfile) ? JSON.parse(File.open(@@filesDBfile).read) : Hash.new
   @@filesCk     = @@filesDB.hash
   @@lock        = Mutex.new
+
+  def CodeParser.filesDB
+    @@filesDB
+  end
 
   def initialize(debug=false,dir="#{ENV['HOME']}/.codegraph")
     @dir   = dir
@@ -94,7 +95,7 @@ class CodeParser
   private :updateFilesDB
 end
 
-class FunctionGraph < RGL::DirectedAdjacencyGraph
+class FunctionGraph < Graph
    attr_accessor :funx, :adds, :excludes, :debug
 
    # Theses Parameters are used by interactive representation and for the file
@@ -125,8 +126,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
       # the following attribute will hold the functionnames and their bodies
       @funx    = Hash.new
       @lock    = Mutex.new
-      @filesDB = File.exist?(@@filesDB) ? JSON.parse(File.open(@@filesDB).read) : Hash.new
-      @filesCk = @db.hash
+      @parser  = CodeParser.new
       @funxDB  = File.exist?(@@funxDB) ? JSON.parse(File.open(@@funxDB).read) : Hash.new
       @funxCk  = @funxDB.hash
 
@@ -141,71 +141,7 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
    # 2. One for functions inside the file 1
    #  and fill the @funx hash
    def genFiles(graph, filelist, exclude=[])
-      threads = []
-
-      filelist.each {|file|
-        threads << Thread.new(file, @@codehomedir) {|file,codehomedir|
-          ctagsKinds = @config[:ctagsopts].nil? ? '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f' \
-                                                : @config[:ctagsopts]
-
-          puts "Processing #{file} ..." if @debug
-          checksum = Digest::SHA256.file(file).hexdigest
-          if @filesDB.has_key?(checksum)
-            code,funxLocations = @filesDB[checksum]
-          else
-            basefile = File.basename(file)
-            tempfile = "_" + basefile
-            case File.extname(file)
-            when '.c','.h' 
-              cppCommand = "cpp -w -fpreprocessed -E  -fdirectives-only #{file}  -o #{codehomedir}/#{tempfile} 2>/dev/null"
-              cppCommand = "cpp -fpreprocessed #{file}  -o #{codehomedir}/#{tempfile} 2>/dev/null"
-              grep       = "grep -v -e '^$' #{codehomedir}/#{tempfile} | grep -v -e '^#' > #{codehomedir}/#{basefile}"
-            when '.f','.f77','.f90','.f95'
-              cppCommand = "cp #{file} #{codehomedir}/#{tempfile}"
-              grep       = "grep -v -e '^$' #{codehomedir}/#{tempfile} | grep -v -e '^ *!' > #{codehomedir}/#{basefile}"
-            else
-              cppCommand = "cp #{file} #{codehomedir}/#{tempfile}"
-              grep       = "grep -v -e '^$' #{codehomedir}/#{tempfile} | grep -v -e '^#' > #{codehomedir}/#{basefile}"
-            end
-            gen4ctags  = "ctags -x #{ctagsKinds}  #{codehomedir}/#{basefile} | sort -n -k 3"
-            command    = [cppCommand,grep].join(";")
-
-            puts gen4ctags if @debug
-            puts command if @debug
-            system(command)
-
-            code          = open(codehomedir+'/'+ File.basename(file)).readlines
-            funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
-            @lock.synchronize { @filesDB[checksum] = [code,funxLocations] }
-
-            # cleanup
-            FileUtils.rm("#{codehomedir}/#{tempfile}") unless @debug
-            FileUtils.rm("#{codehomedir}/#{basefile}") unless @debug
-          end
-
-          funxLocations.each_with_index {|ary,i|
-            name, kind, line, file = ary
-            next if exclude.include?(name)
-            puts name if @debug
-            line           = line.to_i
-            startLineIndex = line - 1
-            endLineIndex   = (i+1 < funxLocations.size) ? funxLocations[i+1][2].to_i - 2 : -1
-            body = code[startLineIndex..endLineIndex].join
-            @lock.synchronize {
-              @funx.store(name,body)
-            }
-          }
-        }
-      }
-      threads.each {|t| t.join}
-
-      # update the code database in case of anything new
-      updateFilesDB
-
-      if @funx.empty?
-         warn "no functions found"
-         exit -1
-      end
+     @parser.read(*filelist)
    end
    
    # fill the graph with all functions found in <filelist> 
@@ -227,12 +163,13 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
           edges.each {|edge| add_edge(*edge)}
         else
           edges = []
-          add_vertex(name)
+          puts self.methods - Object.methods
+          self.add_vertex(name)
           (names - [name] + @adds).each { |func|
             puts name if @debug
             if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
               edge = ["#{name}","#{func}"]
-              add_edge(*edge)
+              self.edge(*edge)
               edges << edge
             end
           }
@@ -247,13 +184,13 @@ class FunctionGraph < RGL::DirectedAdjacencyGraph
      updateFunxDB
    end
 
-  def limit(depth)
-    dv = RGL::DFSVisitor.new(self)
-    dv.attach_distance_map
-    self.depth_first_search(dv) {|u|
-      self.remove_vertex(u) if dv.distance_to_root(u) > depth
-    }
-  end
+#  def limit(depth)
+#    dv = RGL::DFSVisitor.new(self)
+#    dv.attach_distance_map
+#    self.depth_first_search(dv) {|u|
+#      self.remove_vertex(u) if dv.distance_to_root(u) > depth
+#    }
+#  end
 
   def display_functionbody(name)
     @funx[name]

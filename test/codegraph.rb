@@ -3,6 +3,7 @@ require "test/unit"
 require "codegraph"
 require "thread"
 require "pp"
+require "jobqueue"
 
 FORTRAN_SOURCE_0 = "test.f90"
 FORTRAN_SOURCE_1 = "module_B.f90"
@@ -111,6 +112,19 @@ class TestCodeParser < Test::Unit::TestCase
     cp4comparison = CodeParser.new
     cp4comparison.read(@@test0_f90,@@test1_f90)
     assert_equal(cp4comparison.funx.sort,cp.funx.sort)
+  end
+
+  if `hostname`.chomp == 'thingol' then
+    def test_icon
+      cp = CodeParser.new
+      jq = JobQueue.new
+      Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90").each {|file|
+        puts file
+        jq.push(cp,:read,file)
+      }
+      jq.run
+      pp cp.funx.keys
+    end
   end
 
   def _testAll
