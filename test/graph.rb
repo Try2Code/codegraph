@@ -17,9 +17,9 @@ class TestGraph < Test::Unit::TestCase
 
   def test_first
     filelist = [@@test0_f90,@@test1_f90]
-    cp = FunctionGraph.new({:filelist => filelist})
-    cp.scan
-    cp.save('testfirst','png')
+    fg = FunctionGraph.new({:filelist => filelist})
+    fg.scan
+    fg.save('testfirst','png')
     system("qiv testfirst.png") if 'thingol' == `hostname`.chomp
   end
   if `hostname`.chomp == 'thingol' then

@@ -122,80 +122,45 @@ class FunctionGraph < Graph
     @funx = @parser.funx
   end
    
-   def scan
-    #threads = []
+  def scan
     # scan functions for the function names
     names = @parser.funx.keys
     @parser.funx.each_pair {|name,body|
-    # threads << Thread.new(name,body,names) {|name,body,names|
-        puts "Add func: #{name}" if @debug
-        # Check if this body is in the funx DB
-        bodyCk = Digest::SHA256.hexdigest(body)
-        if @@funxDB.has_key?(bodyCk) and @@funxDB[name] == body
-          edges = @@funxDB[bodyCk]
-          edges.each {|edge| self.edge(*edge)}
-        else
-          edges = []
-          puts self.methods - Object.methods
-          #self.add_vertex(name)
-          (names - [name] + @adds).each { |func|
-            puts name if @debug
-            if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
-              edge = ["#{name}","#{func}"]
-              self.edge(*edge)
-              edges << edge
-            end
-          }
-          @lock.synchronize { 
-            @@funxDB[bodyCk] = edges
-            @@funxDB[name]   = body
-          }
-        end
-  #   }
+      puts "Add func: #{name}" if @debug
+      # Check if this body is in the funx DB
+      bodyCk = Digest::SHA256.hexdigest(body)
+      if @@funxDB.has_key?(bodyCk) and @@funxDB[name] == body
+        edges = @@funxDB[bodyCk]
+        edges.each {|edge| self.edge(*edge)}
+      else
+        edges = []
+        puts self.methods - Object.methods
+        #self.add_vertex(name)
+        (names - [name] + @adds).each { |func|
+          puts name if @debug
+          if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
+            edge = ["#{name}","#{func}"]
+            self.edge(*edge)
+            edges << edge
+          end
+        }
+        @lock.synchronize { 
+          @@funxDB[bodyCk] = edges
+          @@funxDB[name]   = body
+        }
+      end
     }
-  #threads.each {|t| t.join}
-     updateFunxDB
-   end
-
-#  def limit(depth)
-#    dv = RGL::DFSVisitor.new(self)
-#    dv.attach_distance_map
-#    self.depth_first_search(dv) {|u|
-#      self.remove_vertex(u) if dv.distance_to_root(u) > depth
-#    }
-#  end
+    updateFunxDB
+  end
 
   def display_functionbody(name)
     @funx[name]
   end
-   # Creates a simple dot file according to the above <Params>. 
-   # Parameters for the nodes are not supported by rgl.
-   def to_dot(filename)
-      File.open(filename,"w") {|f|
-         print_dotted_on(Params,f)
-      }
-   end
 
    # Generates pairs of "func_A -> func_B" to stdout
-   def to_txt
-      each_edge do |left,right|
-         print left,' -> ',right,"\n"
-      end
-   end
-
-   # This function generates a file of the given type using the dot utility.
-   # Supported Types are PS, PNG, JPG, DOT and SVG.
-   def to_type(filename,type)
-      if File.exist?(filename) 
-         system("rm #{filename}")
-      end
-      if File.exist?(filename+"."+type) 
-         system("rm #{filename}."+type)
-      end
-      to_dot(filename+".dot")
-      system("dot -T#{type} -o #{filename} -Nshape=box #{filename}.dot")
-      system("rm #{filename}.dot")
-   end
+#   def to_txt
+#      edges.values.flatten.uniq
+#   end
 
    def updateFunxDB
       File.open(@@funxDBfile,"w") {|f| f << JSON.generate(@@funxDB)}# unless @funxCk == @parser.filesCk
