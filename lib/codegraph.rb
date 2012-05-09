@@ -157,103 +157,103 @@ class FunctionGraph < Graph
     @funx[name]
   end
 
-   # Generates pairs of "func_A -> func_B" to stdout
-#   def to_txt
-#      edges.values.flatten.uniq
-#   end
+  # Generates pairs of "func_A -> func_B" to stdout
+  #   def to_txt
+  #      edges.values.flatten.uniq
+  #   end
 
-   def updateFunxDB
-      File.open(@@funxDBfile,"w") {|f| f << JSON.generate(@@funxDB)}# unless @funxCk == @parser.filesCk
-   end
-   private :updateFunxDB
+  def updateFunxDB
+    File.open(@@funxDBfile,"w") {|f| f << JSON.generate(@@funxDB)}# unless @funxCk == @parser.filesCk
+  end
+  private :updateFunxDB
 end
 
 class SingleFunctionGraph < FunctionGraph
-   attr_accessor  :func
+  attr_accessor  :func
 
-   # Constructor, which creates an empty graph for the rootfunction <func>
-   def initialize(func)
-      # Holds the func'n names, that are allready scanned
-      @scannednames = []
-      # Root func
-      @func = func
-      super()
-   end
+  # Constructor, which creates an empty graph for the rootfunction <func>
+  def initialize(func)
+    # Holds the func'n names, that are allready scanned
+    @scannednames = []
+    # Root func
+    @func = func
+    super()
+  end
 
-   # Works like the one from FunctionGraph except, that it calls 'scan' 
-   # for the recursive descent throug all functions given in <filelist> - exclude
-   def fill(filelist,exclude=[])
-     genFiles(self,filelist,exclude)
-     scan(self, func)
-     updateFunxDB
-   end
+  # Works like the one from FunctionGraph except, that it calls 'scan' 
+  # for the recursive descent throug all functions given in <filelist> - exclude
+  def fill(filelist,exclude=[])
+    genFiles(self,filelist,exclude)
+    scan(self, func)
+    updateFunxDB
+  end
 
-   # For the given root function f, scan walks through the graph, and finds any
-   # other function, that calls f
-   def scan(graph,f)
-     if (@scannednames.include?(f)) 
-     else
-       names = graph.funx.keys
-       if names.include?('*') then
-         puts 'body of *:'
-         puts graph.funx['*']
-       end
-       if not names.include?(func)
-         warn "Function #{func} not found."
-         exit -1
-       end
-       @scannednames << f
-       body   = graph.funx[f]
-       bodyCk = Digest::SHA256.hexdigest(body)
-#       if @funxDB.has_key?(bodyCk) and @funxDB[f] == body
-#         edges = @funxDB[bodyCk]
-#         edges.each {|edge| add_edge(*edge)}
-#         (edges.flatten.uniq-[f]).each {|g| scan(graph,g)}
-#       else
-         edges = []
-         # scan for any other function in the body of f
-         (names - [f] + @adds).each {|g|
-           if /#@@matchBeforFuncName#{g}#@@matchAfterFuncName/.match(body) 
-             graph.add_edge(f,g)
-             edges << [f,g]
-             # go downstairs for all functions from the scanned files
-             scan(graph,g) if names.include?(g)
-           end
-         }
-#         @funxDB[bodyCk] = edges
-#         @funxDB[f]      = body
-#       end
-     end
-   end
-   private :scan
+  # For the given root function f, scan walks through the graph, and finds any
+  # other function, that calls f
+  def scan(graph,f)
+    if (@scannednames.include?(f)) 
+    else
+      names = graph.funx.keys
+      if names.include?('*') then
+        puts 'body of *:'
+        puts graph.funx['*']
+      end
+      if not names.include?(func)
+        warn "Function #{func} not found."
+        exit -1
+      end
+      @scannednames << f
+      body   = graph.funx[f]
+      bodyCk = Digest::SHA256.hexdigest(body)
+      #       if @funxDB.has_key?(bodyCk) and @funxDB[f] == body
+      #         edges = @funxDB[bodyCk]
+      #         edges.each {|edge| add_edge(*edge)}
+      #         (edges.flatten.uniq-[f]).each {|g| scan(graph,g)}
+      #       else
+      edges = []
+      # scan for any other function in the body of f
+      (names - [f] + @adds).each {|g|
+        if /#@@matchBeforFuncName#{g}#@@matchAfterFuncName/.match(body) 
+          graph.add_edge(f,g)
+          edges << [f,g]
+          # go downstairs for all functions from the scanned files
+          scan(graph,g) if names.include?(g)
+        end
+      }
+      #         @funxDB[bodyCk] = edges
+      #         @funxDB[f]      = body
+      #       end
+    end
+  end
+  private :scan
 end
 
 class UpperFunctionGraph < SingleFunctionGraph
-  
-   # scanning upwards unlike SingleFunctionGraph.scan
-   def scan(graph,func)
-      if @scannednames.include?(func) 
-      else
-         if not (graph.funx.keys + @adds).include?(func)
-            warn "Function '#{func}' not found. If this is an internal function, " +
-                 "please try again with the '-w' option to include the internal " +
-                 "funx before scanning."
-            exit -1
-         end
-         @scannednames << func
-         graph.funx.each_pair {|g,gbody|
-            # dont scan a function for itself
-            next if g == func
-            puts g if @debug
-            puts gbody if @debug
-            if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(gbody)
-               graph.add_edge(g,func)
-               scan(graph,g)
-            end
-         }
+
+  # scanning upwards unlike SingleFunctionGraph.scan
+  def scan(graph,func)
+    if @scannednames.include?(func) 
+    else
+      if not (graph.funx.keys + @adds).include?(func)
+        warn "Function '#{func}' not found. If this is an internal function, " +
+          "please try again with the '-w' option to include the internal " +
+          "funx before scanning."
+        exit -1
       end
-   end
-   private :scan
+      @scannednames << func
+      graph.funx.each_pair {|g,gbody|
+        # dont scan a function for itself
+        next if g == func
+        puts g if @debug
+        puts gbody if @debug
+        if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(gbody)
+          graph.add_edge(g,func)
+          scan(graph,g)
+        end
+      }
+    end
+  end
+  private :scan
 end
 
 class EightFunctionGraph < FunctionGraph
