@@ -42,19 +42,18 @@ class TestGraph < Test::Unit::TestCase
   def test8FG
     filelist = [@@test0_f90,@@test1_f90]
     efg = EightFunctionGraph.new(:filelist => filelist,:func => 'xfer_idx_3',:debug => true)
+    pp efg.funx
     display(efg,'test8fg')
   end
 
   if `hostname`.chomp == 'thingol' then
     def test_icon
-      cp = CodeParser.new
-      jq = JobQueue.new
-      Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90").each {|file|
-        puts file
-        jq.push(cp,:read,file)
-      }
-      jq.run
-      pp cp.funx.keys
+      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
+      fg = FunctionGraph.new({:filelist => filelist})
+      fg.scan
+      fg.rotate
+      ofile = 'testicon'
+      display(fg,ofile)
     end
-  end if false
+  end
 end
