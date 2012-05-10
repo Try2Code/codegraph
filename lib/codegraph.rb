@@ -144,10 +144,8 @@ class FunctionGraph < Graph
             edges << edge
           end
         }
-        @lock.synchronize { 
-          @@funxDB[bodyCk] = edges
-          @@funxDB[name]   = body
-        }
+        @@funxDB[bodyCk] = edges
+        @@funxDB[name]   = body
       end
     }
     updateFunxDB
@@ -249,23 +247,13 @@ class UpperFunctionGraph < SingleFunctionGraph
   private :scan
 end
 
-class EightFunctionGraph < FunctionGraph
-  def initialize(func)
-    super()
-    @func = func
+class EightFunctionGraph < Graph
+  def initialize(config)
+    super(config)
   end
-  def fill(*args)
-    g_down = SingleFunctionGraph.new(@func)
-    g_down.fill(*args)
-
-    g_up   = UpperFunctionGraph.new(@func)
-    g_up.fill(*args)
-
-    g_down.each_edge do |u,v|
-      self.add_edge(u,v)
-    end
-    g_up.each_edge do |u,v|
-      self.add_edge(u,v)
-    end
+  def scan
+    g_down = SingleFunctionGraph.new(@config)
+    g_up   = UpperFunctionGraph.new(@config)
+    self.edges = g_down.edges#.merge(g_up.edges)
   end
 end
