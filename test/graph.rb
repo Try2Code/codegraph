@@ -42,18 +42,28 @@ class TestGraph < Test::Unit::TestCase
   def test8FG
     filelist = [@@test0_f90,@@test1_f90]
     efg = EightFunctionGraph.new(:filelist => filelist,:func => 'xfer_idx_3',:debug => true)
-    pp efg.funx
     display(efg,'test8fg')
   end
 
   if `hostname`.chomp == 'thingol' then
     def test_icon
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
-      fg = FunctionGraph.new({:filelist => filelist})
+      fg = FunctionGraph.new(:filelist => filelist)
       fg.scan
       fg.rotate
+      fg.node_attribs << fg.box
       ofile = 'testicon'
-      display(fg,ofile)
+     #display(fg,ofile)
+    end
+    def test_icon_full
+      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
+      puts filelist.size
+      return
+      fg = FunctionGraph.new(:filelist => filelist,:debug => false)
+      fg.scan
+      fg.rotate
+      ofile = 'testiconfull'
+      #display(fg,ofile)
     end
   end
 end
