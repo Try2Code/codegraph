@@ -134,11 +134,10 @@ class FunctionGraph < Graph
         edges.each {|edge| self.edge(*edge)}
       else
         edges = []
-        puts self.methods - Object.methods
-        #self.add_vertex(name)
+        self.node(name)
         (names - [name] + @adds).each { |func|
-          puts name if @debug
-          if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(body)
+          #puts name if @debug
+          if/#@@matchBeforFuncName#{Regexp.escape(func)}#@@matchAfterFuncName/.match(body)
             edge = ["#{name}","#{func}"]
             self.edge(*edge)
             edges << edge
@@ -154,11 +153,6 @@ class FunctionGraph < Graph
   def display_functionbody(name)
     @funx[name]
   end
-
-  # Generates pairs of "func_A -> func_B" to stdout
-  #   def to_txt
-  #      edges.values.flatten.uniq
-  #   end
 
   def updateFunxDB
     File.open(@@funxDBfile,"w") {|f| f << JSON.generate(@@funxDB)}# unless @funxCk == @parser.filesCk
