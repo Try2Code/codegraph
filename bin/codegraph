@@ -2,9 +2,8 @@
 # Which options are availabile ------------------------------------------------
 # Default settings
   $options = {
-    :files    => [],
+    :filelist => [],
     :mode     => nil,
-    :output   => "",
     :function => "",
     :depth    => nil,
     :adds     => [],
@@ -18,8 +17,8 @@ require "optparse"
 def parse(args)
   OptionParser.new do |opts|
     opts.banner = "Usage: codegraph [options]"
-    opts.on("-y", "--debug","Work in debuging mode") do |debug|
-      $options[:debug] = debug
+    opts.on("-d", "--debug","Work in debuging mode") do
+      $options[:debug] = true
     end
     opts.on( "-a","--add f1,f2,f3",Array,"Add function for scanning") do |adds|
       $options[:adds] = adds
@@ -30,9 +29,6 @@ def parse(args)
     opts.on("-f", "--function FUNCTION") do |func|
       $options[:function] = func
       $options[:mode] = 'single'
-    end
-    opts.on( "-s","--show-body","Display function body") do |show|
-      $options[:mode] = 'show'
     end
     opts.on("-u", "--upper-funx FUNCTION") do |func|
       $options[:function] = func
@@ -50,35 +46,16 @@ def parse(args)
     opts.on("-F", "--file-list file0,file1,file3", Array,"List of files (alternative \"file0 file1 file3\")") do |filelist|
       filelist.each do |filedesc|
         unless File.exist?(filedesc)
-          $options[:files] << Dir.glob(File.expand_path(filedesc))
+          $options[:filelist] << Dir.glob(File.expand_path(filedesc))
         else
-          $options[:files] = filelist
+          $options[:filelist] = filelist
         end
       end
-      $options[:files].flatten!
+      $options[:filelist].flatten!
     end
-    opts.on("-p", "--to-ps FILE", "Write Postscripts output file") do |ofile|
-      $options[:ofile] = ofile
-      $options[:output] = 'ps'
-    end
-    opts.on("-S", "--to-svg FILE", "Write Scalable Vector Graphic output file") do |ofile|
-      $options[:ofile] = ofile
-      $options[:output] = 'svg'
-    end
-    opts.on("-P", "--to-png FILE", "Write Portable Network Graphic output file") do |ofile|
-      $options[:ofile] = ofile
-      $options[:output] = 'png'
-    end
-    opts.on("-J", "--to-jpg FILE", "Write JPEG output file") do |ofile|
-      $options[:ofile] = ofile
-      $options[:output] = 'jpg'
-    end
-    opts.on("-D", "--to-dot FILE", "Write dot output file") do |ofile|
-      $options[:ofile] = ofile
-      $options[:output] = 'dot'
-    end
-    opts.on("-T", "--to-txt","Write to stdout") do 
-      $options[:output] = 'txt'
+    opts.on("-o", "--output FILE", "Write image output file (supported formats: ps,png,jpw,svg,..., see 'man dot')") do |ofile|
+      $options[:otype] = File.extname(ofile)[1..-1]
+      $options[:ofile] = ofile[0..(-$options[:otype].size-2)]
     end
     opts.on("-V", "--version","Print version") do 
       puts Codegraph::VERSION
@@ -90,8 +67,12 @@ def parse(args)
     end
   end.parse(args)
 
-  if $options[:files].flatten.empty?
+  if $options[:filelist].flatten.empty?
     warn 'Please use -F do define input files! Use -h for further help.'
+    exit -1
+  end
+  unless $options[:otype]
+    warn 'Please provide an output filename.'
     exit -1
   end
   $options
@@ -103,24 +84,13 @@ pp options if $options[:debug]
 case $options[:mode]
 when "upper"
    g = UpperFunctionGraph.new($options)
-when "single","show"
+when "single"
    g = SingleFunctionGraph.new($options)
 else
    g = FunctionGraph.new($options)
+   g.scan
 end
 
 # What sort of output should be created?
-case $options[:output]
-when "ps", "svg", "png", "jpg"
-  g.save($options[:ofile],$options[:output])
-when "dot"
-  g.to_dot($options[:ofile])
-when "txt"
-  g.to_txt
-else 
-  if $options[:mode] == "show"
-    puts g.display_functionbody($options[:function])
-  else
-    g.display
-  end
-end
+puts "Save graph to #{[$options[:ofile],$options[:otype]].join('.')}...." if $options[:debug]
+g.save($options[:ofile],$options[:otype])

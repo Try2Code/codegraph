@@ -180,7 +180,7 @@ class SingleFunctionGraph < FunctionGraph
     # Holds the func'n names, that are allready scanned
     @scannednames = []
     # Root func
-    @func = @config[:func]
+    @func = @config[:function]
     scan(self,@func)
   end
 
