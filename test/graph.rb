@@ -25,26 +25,25 @@ class TestGraph < Test::Unit::TestCase
   def testFG
     filelist = [@@test0_f90,@@test1_f90]
     fg = FunctionGraph.new(:filelist => filelist)
-    pp fg
     fg.scan
     ofile = 'testfncgraph'
     display(fg,ofile)
   end
   def testSFG
     filelist = [@@test0_f90,@@test1_f90]
-    sg = SingleFunctionGraph.new(:filelist => filelist,:func => 'transfer')
+    sg = SingleFunctionGraph.new(:filelist => filelist,:function => 'transfer')
     ofile = 'testsg'
     display(sg,ofile)
   end
   def testUFG
     filelist = [@@test0_f90,@@test1_f90]
-    sg = UpperFunctionGraph.new(:filelist => filelist,:func => 'xfer_idx_2',:debug => false)
+    sg = UpperFunctionGraph.new(:filelist => filelist,:function => 'xfer_idx_2',:debug => false)
     ofile = 'testufg'
     display(sg,ofile)
   end
-  def test8FG
+  def _test8FG
     filelist = [@@test0_f90,@@test1_f90]
-    efg = EightFunctionGraph.new(:filelist => filelist,:func => 'xfer_idx_3',:debug => false)
+    efg = EightFunctionGraph.new(:filelist => filelist,:function => 'xfer_idx_3',:debug => false)
     display(efg,'test8fg')
   end
 
@@ -55,12 +54,12 @@ class TestGraph < Test::Unit::TestCase
       fg.scan
       fg.rotate
       fg.node_attribs << fg.box
-      display(fg,'testicon') if false
+      display(fg,'testicon')
     end
     def test_icon_full
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/shared/*f90")
       puts filelist.size
-      fg = SingleFunctionGraph.new(:func => 'add_var',:filelist => filelist,:debug => true,:excludes => ['+','-','*','==','finish'])
+      fg = SingleFunctionGraph.new(:function => 'add_var',:filelist => filelist,:debug => false,:excludes => ['+','-','*','==','finish'])
       fg.rotate
       ofile = 'testiconfull'
       display(fg,ofile)

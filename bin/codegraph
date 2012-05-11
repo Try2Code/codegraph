@@ -34,15 +34,15 @@ def parse(args)
       $options[:function] = func
       $options[:mode] = 'upper'
     end
-    opts.on("-C", "--ctags-opts KIND",String) do |opts|
-      $options[:ctagsopts] = opts
-    end
-    opts.on("--match-before REGEXP",String) do |regexp|
-      $options[:matchBefore] = regexp
-    end
-    opts.on("--match-after REGEXP",String) do |regexp|
-      $options[:matchAfter] = regexp
-    end
+#   opts.on("-C", "--ctags-opts KIND",String) do |opts|
+#     $options[:ctagsopts] = opts
+#   end
+#   opts.on("--match-before REGEXP",String) do |regexp|
+#     $options[:matchBefore] = regexp
+#   end
+#   opts.on("--match-after REGEXP",String) do |regexp|
+#     $options[:matchAfter] = regexp
+#   end
     opts.on("-F", "--file-list file0,file1,file3", Array,"List of files (alternative \"file0 file1 file3\")") do |filelist|
       filelist.each do |filedesc|
         unless File.exist?(filedesc)
