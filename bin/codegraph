@@ -38,10 +38,6 @@ def parse(args)
       $options[:function] = func
       $options[:mode] = 'upper'
     end
-    opts.on("-8", "--8-funx FUNCTION") do |func|
-      $options[:function] = func
-      $options[:mode] = 8
-    end
     opts.on("-C", "--ctags-opts KIND",String) do |opts|
       $options[:ctagsopts] = opts
     end
@@ -60,9 +56,6 @@ def parse(args)
         end
       end
       $options[:files].flatten!
-    end
-    opts.on("-d", "--depth DEPTH","Set the maximum depth of the graph") do |depth|
-      $options[:depth] = depth
     end
     opts.on("-p", "--to-ps FILE", "Write Postscripts output file") do |ofile|
       $options[:ofile] = ofile
@@ -112,17 +105,9 @@ when "upper"
    g = UpperFunctionGraph.new($options)
 when "single","show"
    g = SingleFunctionGraph.new($options)
-when 8
-   g = EightFunctionGraph.new($options)
 else
    g = FunctionGraph.new($options)
 end
-
-# Set debug mode
-g.debug = $options[:debug]
-
-# Include additional functions?
-g.adds = $options[:adds]
 
 # What sort of output should be created?
 case $options[:output]

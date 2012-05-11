@@ -1,4 +1,4 @@
-require 'thread'
+require 'jobqueue'
 require 'graph'
 require 'digest'
 require 'json'
@@ -21,12 +21,14 @@ class CodeParser
   @@filesCk     = @@filesDB.hash
   @@lock        = Mutex.new
 
+  # come class methods
   def CodeParser.filesDB
     @@filesDB
   end
   def CodeParser.filesCk
     @@filesCk
   end
+  #=============================================================================
 
   def initialize(debug=false,dir="#{ENV['HOME']}/.codegraph")
     @dir   = dir
@@ -34,11 +36,12 @@ class CodeParser
     @funx  = {}
     @exclude = []
   end
+
   def read(*filelist)
-    threads = []
+    jobqueue = JobQueue.new
 
     filelist.each {|file|
-      threads << Thread.new(file, @dir) {|file,dir|
+      jobqueue.push {
         puts "Cannot find file #{file}" unless File.exist?(file)
         puts "Processing #{file} ..." if @debug
         checksum = Digest::SHA256.file(file).hexdigest
@@ -49,30 +52,30 @@ class CodeParser
           tempfile = "_" + basefile
           case File.extname(file)
           when '.c','.h'
-            cppCommand = "cpp -w -fpreprocessed -E  -fdirectives-only #{file}  -o #{dir}/#{tempfile} 2>/dev/null"
-            cppCommand = "cpp -fpreprocessed #{file}  -o #{dir}/#{tempfile} 2>/dev/null"
-            grep       = "grep -v -e '^$' #{dir}/#{tempfile} | grep -v -e '^#' > #{dir}/#{basefile}"
+            cppCommand = "cpp -w -fpreprocessed -E  -fdirectives-only #{file}  -o #{@dir}/#{tempfile} 2>/dev/null"
+            cppCommand = "cpp -fpreprocessed #{file}  -o #{@dir}/#{tempfile} 2>/dev/null"
+            grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^#' > #{@dir}/#{basefile}"
           when '.f','.f77','.f90','.f95'
-            cppCommand = "cp #{file} #{dir}/#{tempfile}"
-            grep       = "grep -v -e '^$' #{dir}/#{tempfile} | grep -v -e '^ *!' > #{dir}/#{basefile}"
+            cppCommand = "cp #{file} #{@dir}/#{tempfile}"
+            grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^ *!' > #{@dir}/#{basefile}"
           else
-            cppCommand = "cp #{file} #{dir}/#{tempfile}"
-            grep       = "grep -v -e '^$' #{dir}/#{tempfile} | grep -v -e '^#' > #{dir}/#{basefile}"
+            cppCommand = "cp #{file} #{@dir}/#{tempfile}"
+            grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^#' > #{@dir}/#{basefile}"
           end
-          gen4ctags  = "ctags -x #{@@ctagsOpts}  #{dir}/#{basefile} | sort -n -k 3"
+          gen4ctags  = "ctags -x #{@@ctagsOpts}  #{@dir}/#{basefile} | sort -n -k 3"
           command    = [cppCommand,grep].join(";")
 
           puts gen4ctags if @debug
           puts command if @debug
           system(command)
 
-          code          = open(dir+'/'+ File.basename(file)).readlines
+          code          = open(@dir+'/'+ File.basename(file)).readlines
           @funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
           @@lock.synchronize { @@filesDB[checksum] = [code,@funxLocations] }
 
           # cleanup
-          FileUtils.rm("#{dir}/#{tempfile}") unless @debug
-          FileUtils.rm("#{dir}/#{basefile}") unless @debug
+          FileUtils.rm("#{@dir}/#{tempfile}") unless @debug
+          FileUtils.rm("#{@dir}/#{basefile}") unless @debug
         end
         @funxLocations.each_with_index {|ary,i|
           name, kind, line, file = ary
@@ -88,7 +91,7 @@ class CodeParser
         }
       }
     }
-    threads.each {|t| t.join}
+    jobqueue.run
 
     updateFilesDB
   end
@@ -104,53 +107,61 @@ class FunctionGraph < Graph
   @@workDir     = ENV['HOME'] + '/.codegraph'
   @@funxDBfile = @@workDir+'/funxDB.json'
   @@funxDB     = File.exist?(@@funxDBfile) ? JSON.parse(File.open(@@funxDBfile).read) : Hash.new
+  @@lock = Mutex.new
 
   def initialize(config)
     super(self.class.to_s)
     @config  = config 
 
     @debug   = @config[:debug]
-    # the following attribute will hold the functionnames and their bodies
-    @parser  = CodeParser.new
 
     @@matchBeforFuncName = @config[:matchBefor].nil? ? '[^A-z0-9_]\s*': @config[:matchBefor]
     @@matchAfterFuncName = @config[:matchAfter].nil? ? '( *\(| |$)'   : @config[:matchAfter]
 
-    @adds, @excludes = [],[]
+    @adds     = @config[:adds] || []
+    @excludes = @config[:excludes] || []
 
+    @parser  = CodeParser.new
     @parser.read(*@config[:filelist])
     @funx = @parser.funx
   end
    
   def scan
-    # scan functions for the function names
-    names = @parser.funx.keys
+    jobqueue = JobQueue.new
+    # scan functions fo all other function names
+    names = @parser.funx.keys + @adds - @excludes
     @parser.funx.each_pair {|name,body|
-      puts "Add func: #{name}" if @debug
-      # Check if this body is in the funx DB
-      bodyCk = Digest::SHA256.hexdigest(body)
-      if @@funxDB.has_key?(bodyCk) and @@funxDB[name] == body
-        edges = @@funxDB[bodyCk]
-        edges.each {|edge| self.edge(*edge)}
-      else
-        edges = []
-        self.node(name)
-        (names - [name] + @adds).each { |func|
-          #puts name if @debug
-          if/#@@matchBeforFuncName#{Regexp.escape(func)}#@@matchAfterFuncName/.match(body)
-            edge = ["#{name}","#{func}"]
-            self.edge(*edge)
-            edges << edge
-          end
-        }
-        @@funxDB[bodyCk] = edges
-        @@funxDB[name]   = body
-      end
+      next unless names.include?(name)
+      jobqueue.push {
+        puts "Add func: #{name}" if @debug
+        # Check if this body is in the funx DB
+        bodyCk = Digest::SHA256.hexdigest(body)
+        if @@funxDB.has_key?(bodyCk) and @@funxDB[name] == body
+          edges = @@funxDB[bodyCk]
+          edges.each {|edge| self.edge(*edge)}
+        else
+          edges = []
+          self.node(name)
+          (names - [name]).each { |func|
+            if/#@@matchBeforFuncName#{Regexp.escape(func)}#@@matchAfterFuncName/.match(body)
+              edge = ["#{name}","#{func}"]
+              self.edge(*edge)
+              edges << edge
+            end
+          }
+          @@lock.synchronize {
+            @@funxDB[bodyCk] = edges
+            @@funxDB[name]   = body
+          }
+        end
+      }
     }
+    jobqueue.run
+
     updateFunxDB
   end
 
-  def display_functionbody(name)
+  def showBody(name)
     @funx[name]
   end
 
@@ -198,7 +209,7 @@ class SingleFunctionGraph < FunctionGraph
       edges = []
       # scan for any other function in the body of f
       (names - [f] + @adds).each {|g|
-        if /#@@matchBeforFuncName#{g}#@@matchAfterFuncName/.match(body) 
+        if /#@@matchBeforFuncName#{Regexp.escape(g)}#@@matchAfterFuncName/.match(body) 
           graph.edge(f,g)
           edges << [f,g]
           # go downstairs for all functions from the scanned files
@@ -209,6 +220,8 @@ class SingleFunctionGraph < FunctionGraph
       #         @funxDB[f]      = body
       #       end
     end
+  end
+  def scan4(func,searchBody)
   end
   private :scan
 end
@@ -241,13 +254,11 @@ class UpperFunctionGraph < SingleFunctionGraph
   private :scan
 end
 
-class EightFunctionGraph < Graph
+class EightFunctionGraph < FunctionGraph
   def initialize(config)
     super(config)
-  end
-  def scan
-    g_down = SingleFunctionGraph.new(@config)
-    g_up   = UpperFunctionGraph.new(@config)
-    self.edges = g_down.edges#.merge(g_up.edges)
+    @config = config
+    gDown = SingleFunctionGraph.new(@config)
+    gUp   = UpperFunctionGraph.new(@config)
   end
 end

@@ -10,19 +10,22 @@ FORTRAN_SOURCE_1 = "module_B.f90"
 
 class TestGraph < Test::Unit::TestCase
 
+  DISPLAY = {'png' => 'sxiv','svg' => 'chromium'}
+
   thisdir     = FileUtils.pwd
   @@testdir   = File.basename(thisdir) == 'test' ? thisdir : [thisdir,'test'].join(File::SEPARATOR)
   @@test0_f90 = [@@testdir,FORTRAN_SOURCE_0].join(File::SEPARATOR)
   @@test1_f90 = [@@testdir,FORTRAN_SOURCE_1].join(File::SEPARATOR)
 
-  def display(graph,filename)
-    graph.save(filename,'png')
-    system("qiv #{filename}.png") if 'thingol' == `hostname`.chomp
+  def display(graph,filename,type='svg')
+    graph.save(filename,type)
+    system("#{DISPLAY[type]} #{filename}.#{type}") if 'thingol' == `hostname`.chomp
   end
 
   def testFG
     filelist = [@@test0_f90,@@test1_f90]
-    fg = FunctionGraph.new({:filelist => filelist})
+    fg = FunctionGraph.new(:filelist => filelist)
+    pp fg
     fg.scan
     ofile = 'testfncgraph'
     display(fg,ofile)
@@ -41,7 +44,7 @@ class TestGraph < Test::Unit::TestCase
   end
   def test8FG
     filelist = [@@test0_f90,@@test1_f90]
-    efg = EightFunctionGraph.new(:filelist => filelist,:func => 'xfer_idx_3',:debug => true)
+    efg = EightFunctionGraph.new(:filelist => filelist,:func => 'xfer_idx_3',:debug => false)
     display(efg,'test8fg')
   end
 
@@ -52,18 +55,15 @@ class TestGraph < Test::Unit::TestCase
       fg.scan
       fg.rotate
       fg.node_attribs << fg.box
-      ofile = 'testicon'
-     #display(fg,ofile)
+      display(fg,'testicon') if false
     end
     def test_icon_full
-      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
+      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/shared/*f90")
       puts filelist.size
-      return
-      fg = FunctionGraph.new(:filelist => filelist,:debug => false)
-      fg.scan
+      fg = SingleFunctionGraph.new(:func => 'add_var',:filelist => filelist,:debug => true,:excludes => ['+','-','*','==','finish'])
       fg.rotate
       ofile = 'testiconfull'
-      #display(fg,ofile)
+      display(fg,ofile)
     end
   end
 end
