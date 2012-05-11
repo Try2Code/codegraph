@@ -31,9 +31,10 @@ class TestGraph < Test::Unit::TestCase
   end
   def testSFG
     filelist = [@@test0_f90,@@test1_f90]
-    sg = SingleFunctionGraph.new(:filelist => filelist,:function => 'transfer')
-    ofile = 'testsg'
-    display(sg,ofile)
+    sg  = SingleFunctionGraph.new(:filelist => filelist,:function => 'transfer')
+    sg_ = SingleFunctionGraph.new(:filelist => filelist,:function => 'xfer_var')
+    display(sg,'testsg')
+    display(sg_,'testsg_')
   end
   def testUFG
     filelist = [@@test0_f90,@@test1_f90]

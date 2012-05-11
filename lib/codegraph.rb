@@ -189,7 +189,7 @@ class SingleFunctionGraph < FunctionGraph
   def scan(graph,f)
     if (@scannednames.include?(f)) 
     else
-      names = graph.funx.keys
+      names = graph.funx.keys + @adds - @excludes
       if names.include?('*') then
         puts 'body of *:'
         puts graph.funx['*']
@@ -201,27 +201,29 @@ class SingleFunctionGraph < FunctionGraph
       @scannednames << f
       body   = graph.funx[f]
       bodyCk = Digest::SHA256.hexdigest(body)
-      #       if @funxDB.has_key?(bodyCk) and @funxDB[f] == body
-      #         edges = @funxDB[bodyCk]
-      #         edges.each {|edge| add_edge(*edge)}
-      #         (edges.flatten.uniq-[f]).each {|g| scan(graph,g)}
-      #       else
-      edges = []
-      # scan for any other function in the body of f
-      (names - [f] + @adds).each {|g|
-        if /#@@matchBeforFuncName#{Regexp.escape(g)}#@@matchAfterFuncName/.match(body) 
-          graph.edge(f,g)
-          edges << [f,g]
-          # go downstairs for all functions from the scanned files
-          scan(graph,g) if names.include?(g)
-        end
-      }
-      #         @funxDB[bodyCk] = edges
-      #         @funxDB[f]      = body
-      #       end
+      if @@funxDB.has_key?(bodyCk) and @@funxDB[f] == body
+        edges = @@funxDB[bodyCk]
+        edges.each {|edge| graph.edge(*edge)}
+        (edges.flatten.uniq-[f]).each {|g| scan(graph,g)}
+      else
+        edges = []
+        # scan for any other function in the body of f
+        (names - [f]).each {|g|
+          if /#@@matchBeforFuncName#{Regexp.escape(g)}#@@matchAfterFuncName/.match(body) 
+            graph.edge(f,g)
+            edges << [f,g]
+            # go downstairs for all functions from the scanned files
+            scan(graph,g) if names.include?(g)
+          end
+        }
+        #@@lock.synchronize {
+          @@funxDB[bodyCk] = edges
+          @@funxDB[f]      = body
+        #}
+      end
     end
   end
-  def scan4(func,searchBody)
+  def scan4(graph,func,searchBody)
   end
   private :scan
 end
@@ -244,7 +246,7 @@ class UpperFunctionGraph < SingleFunctionGraph
         next if g == func
         puts g if @debug
         puts gbody if @debug
-        if/#@@matchBeforFuncName#{func}#@@matchAfterFuncName/.match(gbody)
+        if/#@@matchBeforFuncName#{Regexp.escape(func)}#@@matchAfterFuncName/.match(gbody)
           graph.edge(g,func)
           scan(graph,g)
         end
