@@ -190,11 +190,7 @@ class SingleFunctionGraph < FunctionGraph
     if (@scannednames.include?(f)) 
     else
       names = graph.funx.keys + @adds - @excludes
-      if names.include?('*') then
-        puts 'body of *:'
-        puts graph.funx['*']
-      end
-      if not names.include?(func)
+      unless names.include?(func)
         warn "Function #{func} not found."
         exit -1
       end
@@ -234,10 +230,9 @@ class UpperFunctionGraph < SingleFunctionGraph
   def scan(graph,func)
     if @scannednames.include?(func) 
     else
-      if not (graph.funx.keys + @adds).include?(func)
-        warn "Function '#{func}' not found. If this is an internal function, " +
-          "please try again with the '-w' option to include the internal " +
-          "funx before scanning."
+      names = graph.funx.keys + @adds - @excludes
+      unless names.include?(func)
+        warn "Function '#{func}' not found"
         exit -1
       end
       @scannednames << func
