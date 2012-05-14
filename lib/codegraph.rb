@@ -7,7 +7,7 @@ require 'pp'
 
 
 module Codegraph
-  VERSION = '0.7.19'
+  VERSION = '0.7.20'
 end
 
 class CodeParser
@@ -31,9 +31,9 @@ class CodeParser
   #=============================================================================
 
   def initialize(debug=false,dir="#{ENV['HOME']}/.codegraph")
-    @dir   = dir
-    @debug = debug
-    @funx  = {}
+    @dir     = dir
+    @debug   = debug
+    @funx    = {}
     @exclude = []
   end
 
@@ -121,9 +121,9 @@ class FunctionGraph < Graph
     @adds     = @config[:adds] || []
     @excludes = @config[:excludes] || []
 
-    @parser  = CodeParser.new
+    @parser   = CodeParser.new
     @parser.read(*@config[:filelist])
-    @funx = @parser.funx
+    @funx     = @parser.funx
   end
    
   def scan
