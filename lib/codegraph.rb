@@ -11,7 +11,7 @@ module Codegraph
 end
 
 class CodeParser
-  attr_reader   :funxLocations, :funx
+  attr_reader   :funx,:files
   attr_accessor :exclude
 
   @@ctagsOpts   = '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f'
@@ -34,6 +34,7 @@ class CodeParser
     @dir     = dir
     @debug   = debug
     @funx    = {}
+    @files   = {}
     @exclude = []
   end
 
@@ -42,11 +43,17 @@ class CodeParser
 
     filelist.each {|file|
       jobqueue.push {
-        puts "Cannot find file #{file}" unless File.exist?(file)
-        puts "Processing #{file} ..." if @debug
+        unless File.exist?(file)
+          warn "Cannot find file #{file}"
+          return
+        else
+          puts "Processing #{file} ..." if @debug
+        end
+
         checksum = Digest::SHA256.file(file).hexdigest
-        if @@filesDB.has_key?(checksum)
-          code,@funxLocations = @@filesDB[checksum]
+        if @@filesDB.has_key?(checksum) and @@filesDB.has_key?(file)
+          code,funxLocations = @@filesDB[checksum]
+          @files[file]       = @@filesDB[file]
         else
           basefile = File.basename(file)
           tempfile = "_" + basefile
@@ -70,14 +77,18 @@ class CodeParser
           system(command)
 
           code          = open(@dir+'/'+ File.basename(file)).readlines
-          @funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
-          @@lock.synchronize { @@filesDB[checksum] = [code,@funxLocations] }
+          funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
+          @@lock.synchronize { 
+            @@filesDB[checksum] = [code,funxLocations]
+            @@filesDB[file]     = funxLocations.map {|v| v[0]}
+            @files[file]        = @@filesDB[file]
+          }
 
           # cleanup
           FileUtils.rm("#{@dir}/#{tempfile}") unless @debug
           FileUtils.rm("#{@dir}/#{basefile}") unless @debug
         end
-        @funxLocations.each_with_index {|ary,i|
+        funxLocations.each_with_index {|ary,i|
           name, kind, line, file = ary
           next if @exclude.include?(name)
           puts name if @debug
@@ -101,13 +112,21 @@ class CodeParser
   private :updateFilesDB
 end
 
+# needed for svg output
+class Graph
+  def empty?
+    edges.empty?
+  end
+end
+
 class FunctionGraph < Graph
   attr_accessor :funx, :adds, :excludes, :debug
 
-  @@workDir     = ENV['HOME'] + '/.codegraph'
+  # internal database for former scans
+  @@workDir    = ENV['HOME'] + '/.codegraph'
   @@funxDBfile = @@workDir+'/funxDB.json'
   @@funxDB     = File.exist?(@@funxDBfile) ? JSON.parse(File.open(@@funxDBfile).read) : Hash.new
-  @@lock = Mutex.new
+  @@lock       = Mutex.new
 
   def initialize(config)
     super(self.class.to_s)
@@ -219,8 +238,6 @@ class SingleFunctionGraph < FunctionGraph
       end
     end
   end
-  def scan4(graph,func,searchBody)
-  end
   private :scan
 end
 
@@ -240,7 +257,6 @@ class UpperFunctionGraph < SingleFunctionGraph
         # dont scan a function for itself
         next if g == func
         puts g if @debug
-        puts gbody if @debug
         if/#@@matchBeforFuncName#{Regexp.escape(func)}#@@matchAfterFuncName/.match(gbody)
           graph.edge(g,func)
           scan(graph,g)
@@ -257,5 +273,30 @@ class EightFunctionGraph < FunctionGraph
     @config = config
     gDown = SingleFunctionGraph.new(@config)
     gUp   = UpperFunctionGraph.new(@config)
+  end
+end
+
+class FileGraph < Graph
+  attr_reader :funx,:files
+  def initialize(config)
+    super(self.class.to_s)
+    @config      = config
+    @debug       = @config[:debug]
+    @parser      = CodeParser.new
+    @parser.read(*@config[:filelist])
+    @funx,@files = @parser.funx, @parser.files
+
+    scan
+  end
+
+  def scan
+    leaf_node = white + filled
+    @files.each {|file,myfunx|
+      subgraph "cluster_#{rand(1000)}_#{file}" do
+        label file
+        graph_attribs << blue << filled << lightgray
+        myfunx.each {|func| node(func)}
+      end
+    }
   end
 end
