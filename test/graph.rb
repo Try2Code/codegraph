@@ -67,15 +67,14 @@ class TestGraph < Test::Unit::TestCase
     end
     def test_icon_full
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/shared/*f90")
-      puts filelist.size
-      fg = SingleFunctionGraph.new(:function => 'add_var',:filelist => filelist,:debug => false,:excludes => ['+','-','*','==','finish'])
+      fg = SingleFunctionGraph.new(:function => 'add_var',:filelist => filelist,:debug => true,:excludes => ['+','-','*','==','finish'])
       fg.rotate
       ofile = 'testiconfull'
       display(fg,ofile)
     end
     def test_icon_filegraph
-      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
-#      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
+      #filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
+      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
       fileg =     FileGraph.new(:filelist => filelist)
       funcg = FunctionGraph.new(:filelist => filelist)
       funcg.scan
