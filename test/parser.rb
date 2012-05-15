@@ -114,6 +114,36 @@ class TestCodeParser < Test::Unit::TestCase
     assert_equal(cp4comparison.funx.sort,cp.funx.sort)
   end
 
+  def test_files_relation
+    cp = CodeParser.new
+    [ @@test0_f90,@@test1_f90].each {|file| cp.read(file) }
+    assert_equal({"/home/ram/src/git/codegraph/test/test.f90"=>
+		 ["xfer_var",
+		   "xfer_idx",
+		   "allocate_int_state",
+		   "construct",
+		   "xfer_var_r2",
+		   "xfer_var_r3",
+		   "xfer_var_r4",
+		   "xfer_var_i2",
+		   "xfer_idx_2",
+		   "xfer_idx_3",
+		   "transfer"],
+		   "/home/ram/src/git/codegraph/test/module_B.f90"=>
+		 ["xfer_var_B",
+		   "xfer_idx_B",
+		   "allocate_int_state_B",
+		   "construct_B",
+		   "xfer_var_r2_B",
+		   "xfer_var_r3_B",
+		   "xfer_var_r4_B",
+		   "xfer_var_i2_B",
+		   "xfer_idx_2_B",
+		   "xfer_idx_3_B",
+		   "transfer_B"]},cp.files)
+  end
+
+
   if `hostname`.chomp == 'thingol' then
     def test_icon
       cp = CodeParser.new
