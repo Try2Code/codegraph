@@ -26,11 +26,20 @@ C and Fortran. That's why I added these two to codegraph. Preprocessing is a
 little bit tricky, but at least for C, it works (hopefully).
 If you have any kind of feature wishes, please let me know.
 
+= changelog
+
+* 0.7.19: 
+
+** Changed from RGL to graph library
+** skipped -8 options, this will be reimplemented later
+
+
 = thanks
 
-Horst Duchene, developer of the Ruby Graph Library
-Of cource: the ruby communitiy, esp. the mailing-list users
-YOU, using codegraph
+* Horst Duchene, developer of the Ruby Graph Library
+* Ryan Davis for providing graph
+* Of cource: the ruby communitiy, esp. the mailing-list users
+* YOU, using codegraph
 
 = contact
 
