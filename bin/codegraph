@@ -8,7 +8,10 @@
     :depth    => nil,
     :adds     => [],
     :excludes => [],
-    :debug    => false
+    :cluster  => false,
+    :debug    => false,
+    :boxes   => false,
+    :rotate   => false
   }
 
 require "codegraph"
@@ -33,6 +36,15 @@ def parse(args)
     opts.on("-u", "--upper-funx FUNCTION") do |func|
       $options[:function] = func
       $options[:mode] = 'upper'
+    end
+    opts.on("-c","--with-files-cluster","Show filenames in graph") do
+      $options[:cluster] = true
+    end
+    opts.on("-r","--rotate","rotate graph 90deg [default:false]") do
+      $options[:rotate] = true
+    end
+    opts.on("-b","--with-boxes","use boxes instead of ovals") do
+      $options[:boxes] = true
     end
 #   opts.on("-C", "--ctags-opts KIND",String) do |opts|
 #     $options[:ctagsopts] = opts
@@ -83,14 +95,25 @@ pp options if $options[:debug]
 # What kind of graph should be generated?
 case $options[:mode]
 when "upper"
-   g = UpperFunctionGraph.new($options)
+  g = UpperFunctionGraph.new($options)
 when "single"
-   g = SingleFunctionGraph.new($options)
+  g = SingleFunctionGraph.new($options)
 else
-   g = FunctionGraph.new($options)
-   g.scan
+  g = FunctionGraph.new($options)
+  g.scan
 end
 
+g.rotate if $options[:rotate]
+g.node_attribs << g.box if $options[:boxes]
+
+if $options[:cluster]
+  puts "Clustering wrt files"
+  fileGraph = FileGraph.new($options) if $options[:cluster]
+  fileGraph.rotate if $options[:rotate]
+  fileGraph.node_attribs << fileGraph.box  if $options[:boxes]
+  fileGraph.subgraph(g)
+  g = fileGraph
+end
 # What sort of output should be created?
 puts "Save graph to #{[$options[:ofile],$options[:otype]].join('.')}...." if $options[:debug]
 g.save($options[:ofile],$options[:otype])
