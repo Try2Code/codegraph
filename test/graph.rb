@@ -16,8 +16,9 @@ class TestGraph < Test::Unit::TestCase
   @@testdir   = File.basename(thisdir) == 'test' ? thisdir : [thisdir,'test'].join(File::SEPARATOR)
   @@test0_f90 = [@@testdir,FORTRAN_SOURCE_0].join(File::SEPARATOR)
   @@test1_f90 = [@@testdir,FORTRAN_SOURCE_1].join(File::SEPARATOR)
+  @@filelist  = [@@test0_f90,@@test1_f90]
 
-  def display(graph,filename,type='svg')
+  def display(graph,filename,type='png')
     graph.save(filename,type)
     system("#{DISPLAY[type]} #{filename}.#{type}") if 'thingol' == `hostname`.chomp
   end
@@ -48,6 +49,13 @@ class TestGraph < Test::Unit::TestCase
     display(efg,'test8fg')
   end
 
+  def testFileGraph
+    fileG = FileGraph.new(:filelist => @@filelist,:debug => true)
+    sg  = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'transfer')
+    fileG.subgraph(sg)
+    display(fileG,'testFileG')
+  end
+
   if `hostname`.chomp == 'thingol' then
     def test_icon
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
@@ -64,6 +72,22 @@ class TestGraph < Test::Unit::TestCase
       fg.rotate
       ofile = 'testiconfull'
       display(fg,ofile)
+    end
+    def test_icon_filegraph
+      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
+#      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
+      fileg =     FileGraph.new(:filelist => filelist)
+      funcg = FunctionGraph.new(:filelist => filelist)
+      funcg.scan
+
+      ofile = 'testiconfiles'
+      display(fileg,ofile) if false
+      display(funcg,ofile) if false
+
+      fileg.subgraph(funcg)
+      fileg.rotate
+      fileg.node_attribs << fileg.box
+      display(fileg,'funxPlusfiles','svg')
     end
   end
 end
