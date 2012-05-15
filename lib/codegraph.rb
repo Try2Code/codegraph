@@ -206,12 +206,14 @@ class SingleFunctionGraph < FunctionGraph
   # For the given root function f, scan walks through the graph, and finds any
   # other function, that calls f
   def scan(graph,f)
+    puts "Scanning #{f} ..." if @config[:debug]
     if (@scannednames.include?(f)) 
+      return
     else
       names = graph.funx.keys + @adds - @excludes
-      unless names.include?(func)
+      unless names.include?(f)
         warn "Function #{func} not found."
-        exit -1
+        return
       end
       @scannednames << f
       body   = graph.funx[f]
