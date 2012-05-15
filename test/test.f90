@@ -1,5 +1,6 @@
 MODULE A
-!
+
+USE module_B
 !
 IMPLICIT NONE
 
@@ -107,6 +108,7 @@ SUBROUTINE transfer()
 
 !  ENDIF
   CALL xfer_idx()
+  CALL transfer_B()
 END SUBROUTINE transfer_interpol_state
 !-------------------------------------------------------------------------
 END MODULE A
