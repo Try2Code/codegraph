@@ -7,6 +7,7 @@ require "jobqueue"
 
 FORTRAN_SOURCE_0 = "test.f90"
 FORTRAN_SOURCE_1 = "module_B.f90"
+C_SOURCE         = "test00.c"
 
 class TestGraph < Test::Unit::TestCase
 
@@ -16,6 +17,7 @@ class TestGraph < Test::Unit::TestCase
   @@testdir   = File.basename(thisdir) == 'test' ? thisdir : [thisdir,'test'].join(File::SEPARATOR)
   @@test0_f90 = [@@testdir,FORTRAN_SOURCE_0].join(File::SEPARATOR)
   @@test1_f90 = [@@testdir,FORTRAN_SOURCE_1].join(File::SEPARATOR)
+  @@test0_c   = [@@testdir,C_SOURCE].join(File::SEPARATOR)
   @@filelist  = [@@test0_f90,@@test1_f90]
 
   def display(graph,filename,type='png')
@@ -57,6 +59,13 @@ class TestGraph < Test::Unit::TestCase
   end
 
   if `hostname`.chomp == 'thingol' then
+    def setup
+      puts "CleanUp ~/.codegraph...."
+      Dir.glob("#{ENV['HOME']}/.codegraph/*.json").each {|f| 
+        puts " ... remove #{f}"
+        FileUtils.rm(f)
+      }
+    end
     def test_icon
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
       fg = FunctionGraph.new(:filelist => filelist)
@@ -87,6 +96,10 @@ class TestGraph < Test::Unit::TestCase
       fileg.rotate
       fileg.node_attribs << fileg.box
       display(fileg,'funxPlusfiles','svg')
+    end
+    def test_cdo
+      sg  = SingleFunctionGraph.new(:filelist =>[@@test0_c] ,:function => 'Copy',:debug => true)
+      display(sg,'cdo')
     end
   end
 end
