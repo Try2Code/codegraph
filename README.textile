@@ -10,7 +10,8 @@ For technical issues I recommend to use 'rdoc -a'. Otherwise use the man page or
 
 h2. installation
 
-    gem install codegraph
+<pre>gem install codegraph</pre> or
+<pre>gem install codegraph --user-install</pre> for non-system-wide installation
 
 h2. development
 
