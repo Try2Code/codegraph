@@ -7,10 +7,12 @@ require 'pp'
 
 
 module Codegraph
-  VERSION = '0.7.20'
+  VERSION = '0.7.21'
 end
 
 class CodeParser
+  include Digest
+
   attr_reader   :funx,:files
   attr_accessor :exclude
 
@@ -50,7 +52,7 @@ class CodeParser
           puts "Processing #{file} ..." if @debug
         end
 
-        checksum = Digest::SHA256.file(file).hexdigest
+        checksum = hexencode(file)
         if @@filesDB.has_key?(checksum) and @@filesDB.has_key?(file)
           code,funxLocations = @@filesDB[checksum]
           @files[file]       = @@filesDB[file]
@@ -61,7 +63,7 @@ class CodeParser
           when '.c','.h'
             cppCommand = "cpp -w -fpreprocessed -E  -fdirectives-only #{file}  -o #{@dir}/#{tempfile} 2>/dev/null"
             cppCommand = "cpp -fpreprocessed #{file}  -o #{@dir}/#{tempfile} 2>/dev/null"
-            grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^#' > #{@dir}/#{basefile}"
+            grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^#' | perl -pi -e " +'\'s/".[^"]*"//g\'' +" > #{@dir}/#{basefile}"
           when '.f','.f77','.f90','.f95'
             cppCommand = "cp #{file} #{@dir}/#{tempfile}"
             grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^ *!' > #{@dir}/#{basefile}"
@@ -120,6 +122,8 @@ class Graph
 end
 
 class FunctionGraph < Graph
+  include Digest
+
   attr_accessor :funx, :adds, :excludes, :debug
 
   # internal database for former scans
@@ -127,6 +131,11 @@ class FunctionGraph < Graph
   @@funxDBfile = @@workDir+'/funxDB.json'
   @@funxDB     = File.exist?(@@funxDBfile) ? JSON.parse(File.open(@@funxDBfile).read) : Hash.new
   @@lock       = Mutex.new
+
+  @@match = {
+    :c => {},
+    :f => {}
+  }
 
   def initialize(config)
     super(self.class.to_s)
@@ -140,7 +149,7 @@ class FunctionGraph < Graph
     @adds     = @config[:adds] || []
     @excludes = @config[:excludes] || []
 
-    @parser   = CodeParser.new
+    @parser   = CodeParser.new(@debug)
     @parser.read(*@config[:filelist])
     @funx     = @parser.funx
   end
@@ -154,7 +163,7 @@ class FunctionGraph < Graph
       jobqueue.push {
         puts "Add func: #{name}" if @debug
         # Check if this body is in the funx DB
-        bodyCk = Digest::SHA256.hexdigest(body)
+        bodyCk = hexencode(body)
         if @@funxDB.has_key?(bodyCk) and @@funxDB[name] == body
           edges = @@funxDB[bodyCk]
           edges.each {|edge| self.edge(*edge)}
@@ -217,7 +226,7 @@ class SingleFunctionGraph < FunctionGraph
       end
       @scannednames << f
       body   = graph.funx[f]
-      bodyCk = Digest::SHA256.hexdigest(body)
+      bodyCk = hexencode(body)
       if @@funxDB.has_key?(bodyCk) and @@funxDB[f] == body
         edges = @@funxDB[bodyCk]
         edges.each {|edge| graph.edge(*edge)}

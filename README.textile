@@ -28,6 +28,11 @@ If you have any kind of feature wishes, please let me know.
 
 = changelog
 
+* 0.7.21:
+
+** use propper method for encoding
+** improved C scanning
+
 * 0.7.20:
 
 ** new options for clustering by filenames (-c), graph rotation (-r) and box representation (-b) instead of ovals
