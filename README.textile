@@ -1,6 +1,6 @@
 h2. Codegraph
 
-'codegraph' is an analysis tool for PHP-, PERL, Bash, C and Fortran-libraries.  It scans files from a list and extracts the the functions therein. Then it extracts the body of each function and tries to find any other of the functions found before. If successfull, it genereates an edge from the function which calls the other function (calling function ----> called function). If no function is found, it generates a single knode.  'codegraph' needs the directory $HOME/.codegraph for some files. You can generate is manually or 'codegraph' will do this for you, when it's started the first time.  
+'codegraph' is an analysis tool for PHP-, PERL, Bash, C and Fortran-libraries.  It scans files from a list and extracts the the functions therein. Then it extracts the body of each function and tries to find any other of the functions found before. If successfull, it genereates an edge from the function which calls the other function (calling function ----> called function). If no function is found, it generates a single knode.  'codegraph' needs the directory @$HOME/.codegraph@ for some files. You can generate is manually or 'codegraph' will do this for you, when it's started the first time.  
 
 homepage: http://codegraph.rubyforge.org
 
