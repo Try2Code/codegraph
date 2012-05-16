@@ -23,7 +23,7 @@ h2. changelog
 |      |improved C scanning|
 |0.7.20|new options for clustering by filenames (-c), graph rotation (-r) and box representation (-b) instead of ovals|
 |0.7.19|Changed from RGL to graph library|
-|      |skipped -8 options, this will be reimplemented later|
+|      |skipped -8 option, this will be reimplemented later|
 |      |general speed up through threadding and caching of results|
 
 h2. thanks
