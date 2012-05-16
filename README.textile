@@ -6,8 +6,7 @@ homepage: http://codegraph.rubyforge.org
 
 h2. documentation
 
-For technical issues I recommend to use 'rdoc -a'. Otherwise use the man page
-or just  type "codegraph --help".
+For technical issues I recommend to use 'rdoc -a'. Otherwise use the man page or just  type "codegraph --help".
 
 h2. installation
 
@@ -44,4 +43,4 @@ h2. thanks
 
 h2. contact
 
-stark.dreamdetective@gmail.com
+stark.dreamdetective@gmail.com or via github
