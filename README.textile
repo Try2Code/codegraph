@@ -1,4 +1,4 @@
-= Codegraph
+h2. Codegraph
 'codegraph' is an analysis tool for PHP-, PERL, Bash, C and Fortran-libraries.
 It scans files from a list and extracts the the functions therein. Then it
 extracts the body of each function and tries to find any other of the functions
@@ -10,15 +10,16 @@ directory $HOME/.codegraph for some files. You can generate is manually or
 
 homepage: http://codegraph.rubyforge.org
 
-= documentation
+h2. documentation
+
 For technical issues I recommend to use 'rdoc -a'. Otherwise use the man page
 or just  type "codegraph --help".
 
-= installation
+h2. installation
 
     gem install codegraph
 
-= development
+h2. development
 
 I take codegraph as a moving target. I uses it for PHP in the beginning, but
 ctags knows a lot languages. So I took over Bash and Perl, too. Now is mainly used for
@@ -26,7 +27,7 @@ C and Fortran. That's why I added these two to codegraph. Preprocessing is a
 little bit tricky, but at least for C, it works (hopefully).
 If you have any kind of feature wishes, please let me know.
 
-= changelog
+h2. changelog
 
 * 0.7.21:
 
@@ -44,13 +45,13 @@ If you have any kind of feature wishes, please let me know.
 ** general speed up through threadding and caching of results
 
 
-= thanks
+h2. thanks
 
 * Horst Duchene, developer of the Ruby Graph Library
 * Ryan Davis for providing graph
 * Of cource: the ruby communitiy, esp. the mailing-list users
 * YOU, using codegraph
 
-= contact
+h2. contact
 
 stark.dreamdetective@gmail.de
