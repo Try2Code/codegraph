@@ -19,6 +19,7 @@ I take codegraph as a moving target. I uses it for PHP in the beginning, but cta
 
 h2. changelog
 
+|0.7.22|reactive the ctags-relates options for scanning other languages/language elements|
 |0.7.21|use propper method for encoding|
 |      |improved C scanning|
 |0.7.20|new options for clustering by filenames (-c), graph rotation (-r) and box representation (-b) instead of ovals|

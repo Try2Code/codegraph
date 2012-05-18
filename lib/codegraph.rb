@@ -14,7 +14,7 @@ class CodeParser
   include Digest
 
   attr_reader   :funx,:files
-  attr_accessor :exclude
+  attr_accessor :exclude,:ctagsOpts
 
   @@ctagsOpts   = '--c-kinds=f --fortran-kinds=fsip --php-kinds=f --perl-kinds=f'
   @@workDir     = ENV['HOME'] + '/.codegraph'
@@ -32,12 +32,11 @@ class CodeParser
   end
   #=============================================================================
 
-  def initialize(debug=false,dir="#{ENV['HOME']}/.codegraph")
-    @dir     = dir
-    @debug   = debug
-    @funx    = {}
-    @files   = {}
-    @exclude = []
+  def initialize(debug=false,ctagsOpts=nil)
+    @debug        = debug
+    @ctagsOpts    = ctagsOpts.nil? ? @@ctagsOpts : ctagsOpts
+    @funx, @files = {},{}
+    @exclude      = []
   end
 
   def read(*filelist)
@@ -71,7 +70,7 @@ class CodeParser
             cppCommand = "cp #{file} #{@dir}/#{tempfile}"
             grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^#' > #{@dir}/#{basefile}"
           end
-          gen4ctags  = "ctags -x #{@@ctagsOpts}  #{@dir}/#{basefile} | sort -n -k 3"
+          gen4ctags  = "ctags -x #{@ctagsOpts}  #{@dir}/#{basefile} | sort -n -k 3"
           command    = [cppCommand,grep].join(";")
 
           puts gen4ctags if @debug

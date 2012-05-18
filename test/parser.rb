@@ -143,6 +143,13 @@ class TestCodeParser < Test::Unit::TestCase
 		   "transfer_B"]},cp.files)
   end
 
+  def test_f90_modules
+    cp = CodeParser.new(true,'--fortran-kinds=m')
+    cp.read(@@test0_f90)
+    assert_equal('A',cp.funx.keys.first)
+    cp.read(@@test1_f90)
+    assert_equal(['A','B','C'],cp.funx.keys)
+  end
 
   if `hostname`.chomp == 'thingol' then
     def test_icon
