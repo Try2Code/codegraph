@@ -1,6 +1,7 @@
 MODULE A
 
-USE module_B
+USE B
+USE C
 !
 IMPLICIT NONE
 
