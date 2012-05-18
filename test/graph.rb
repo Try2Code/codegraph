@@ -26,28 +26,25 @@ class TestGraph < Test::Unit::TestCase
   end
 
   def testFG
-    filelist = [@@test0_f90,@@test1_f90]
-    fg = FunctionGraph.new(:filelist => filelist)
+    fg = FunctionGraph.new(:filelist => @@filelist)
     fg.scan
     ofile = 'testfncgraph'
     display(fg,ofile)
   end
   def testSFG
     filelist = [@@test0_f90,@@test1_f90]
-    sg  = SingleFunctionGraph.new(:filelist => filelist,:function => 'transfer')
-    sg_ = SingleFunctionGraph.new(:filelist => filelist,:function => 'xfer_var')
+    sg  = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'transfer')
+    sg_ = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_var')
     display(sg,'testsg')
     display(sg_,'testsg_')
   end
   def testUFG
-    filelist = [@@test0_f90,@@test1_f90]
-    sg = UpperFunctionGraph.new(:filelist => filelist,:function => 'xfer_idx_2',:debug => false)
+    sg = UpperFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_idx_2',:debug => false)
     ofile = 'testufg'
     display(sg,ofile)
   end
   def _test8FG
-    filelist = [@@test0_f90,@@test1_f90]
-    efg = EightFunctionGraph.new(:filelist => filelist,:function => 'xfer_idx_3',:debug => false)
+    efg = EightFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_idx_3',:debug => false)
     display(efg,'test8fg')
   end
 
@@ -56,6 +53,10 @@ class TestGraph < Test::Unit::TestCase
     sg  = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'transfer')
     fileG.subgraph(sg)
     display(fileG,'testFileG')
+  end
+
+  def test_f90_modules
+    fg = FunctionGraph.new(:filelist => @@filelist)
   end
 
   if `hostname`.chomp == 'thingol' then
