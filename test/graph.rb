@@ -59,7 +59,7 @@ class TestGraph < Test::Unit::TestCase
   end
 
   if `hostname`.chomp == 'thingol' then
-    def setup
+    def _setup
       puts "CleanUp ~/.codegraph...."
       Dir.glob("#{ENV['HOME']}/.codegraph/*.json").each {|f| 
         puts " ... remove #{f}"
@@ -67,12 +67,12 @@ class TestGraph < Test::Unit::TestCase
       }
     end
     def test_icon
-      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
-      fg = FunctionGraph.new(:filelist => filelist)
-      fg.scan
+      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
+      fg = SingleFunctionGraph.new(:filelist => filelist,:function => 'mo_hydro_ocean_run',:debug => true)
+      fg.scan if false
       fg.rotate
       fg.node_attribs << fg.box
-      display(fg,'testicon')
+      display(fg,'testicon','svg')
     end
     def test_icon_full
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/shared/*f90")

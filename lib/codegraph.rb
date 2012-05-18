@@ -7,7 +7,7 @@ require 'pp'
 
 
 module Codegraph
-  VERSION = '0.7.21'
+  VERSION = '0.7.22rc1'
 end
 
 class CodeParser
@@ -145,6 +145,8 @@ class FunctionGraph < Graph
 
     @@matchBeforFuncName = @config[:matchBefor].nil? ? '[^A-z0-9_]\s*': @config[:matchBefor]
     @@matchAfterFuncName = @config[:matchAfter].nil? ? '( *\(| |$)'   : @config[:matchAfter]
+    @@matchBeforFuncName = @config[:matchBefor].nil? ? 'USE\s+': @config[:matchBefor]
+    @@matchAfterFuncName = @config[:matchAfter].nil? ? '(,| |$)'   : @config[:matchAfter]
 
     @adds     = @config[:adds] || []
     @excludes = @config[:excludes] || []
