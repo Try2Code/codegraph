@@ -2,7 +2,7 @@ require 'rubygems'
 
 spec = Gem::Specification.new do |s|
   s.name              = "codegraph"
-  s.version           = File.open("lib/codegraph.rb").readlines.grep(/VERSION/)[0].split('=').last.chomp.strip.tr("'",'')
+  s.version           = '0.7.21'
   s.date              = Time.new.strftime("%Y-%m-%d")
   s.platform          = Gem::Platform::RUBY
   s.bindir            = 'bin'
