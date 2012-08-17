@@ -30,13 +30,24 @@ class CodeParser
   def CodeParser.filesCk
     @@filesCk
   end
+  def updateCacheLocation
+    @@filesDBfile = @dir+'/filesDB.json'
+    pp @@filesDBfile if @debug
+    @@filesDB     = File.exist?(@@filesDBfile) ? JSON.parse(File.open(@@filesDBfile).read) : Hash.new
+    @@filesCk     = @@filesDB.hash
+  end
   #=============================================================================
 
-  def initialize(debug=false,ctagsOpts=nil)
-    @debug        = debug
-    @ctagsOpts    = ctagsOpts.nil? ? @@ctagsOpts : ctagsOpts
+  def initialize(config={})
+    @debug        = config[:debug].nil?        ? false       : config[:debug]
+    @dir          = config[:dir].nil?          ? @@workDir   : config[:dir]
+    @ctagsOpts    = config[:ctagsOpts].nil?    ? @@ctagsOpts : config[:ctagsOpts]
+    @disableCache = config[:disableCache].nil? ? false       : config[:disableCache]
     @funx, @files = {},{}
     @exclude      = []
+
+    FileUtils.mkdir_p(@dir) unless File.directory?(@dir)
+    updateCacheLocation if @dir != @@workDir
   end
 
   def read(*filelist)
@@ -52,6 +63,7 @@ class CodeParser
         end
 
         checksum = hexencode(file)
+        #if @disableCache or (@@filesDB.has_key?(checksum) and @@filesDB.has_key?(file))
         if @@filesDB.has_key?(checksum) and @@filesDB.has_key?(file)
           code,funxLocations = @@filesDB[checksum]
           @files[file]       = @@filesDB[file]
@@ -138,19 +150,21 @@ class FunctionGraph < Graph
 
   def initialize(config)
     super(self.class.to_s)
-    @config  = config 
+    @config  = config
 
-    @debug   = @config[:debug]
+    @debug        = @config[:debug].nil?        ? false       : @config[:debug]
+    @dir          = @config[:dir].nil?          ? [ENV['HOME'],'.codegraph'].join("/")   : @config[:dir]
+    @disableCache = @config[:disableCache].nil? ? false       : @config[:disableCache]
 
     @@matchBeforFuncName = @config[:matchBefor].nil? ? '[^A-z0-9_]\s*': @config[:matchBefor]
     @@matchAfterFuncName = @config[:matchAfter].nil? ? '( *\(| |$)'   : @config[:matchAfter]
-    @@matchBeforFuncName = @config[:matchBefor].nil? ? 'USE\s+': @config[:matchBefor]
-    @@matchAfterFuncName = @config[:matchAfter].nil? ? '(,| |$)'   : @config[:matchAfter]
+#    @@matchBeforFuncName = @config[:matchBefor].nil? ? 'USE\s+': @config[:matchBefor]
+#    @@matchAfterFuncName = @config[:matchAfter].nil? ? '(,| |$)'   : @config[:matchAfter]
 
     @adds     = @config[:adds] || []
     @excludes = @config[:excludes] || []
 
-    @parser   = CodeParser.new(@debug)
+    @parser   = CodeParser.new(:debug => @debug,:dir => @dir)
     @parser.read(*@config[:filelist])
     @funx     = @parser.funx
   end
@@ -165,6 +179,7 @@ class FunctionGraph < Graph
         puts "Add func: #{name}" if @debug
         # Check if this body is in the funx DB
         bodyCk = hexencode(body)
+        #if @disableCache or (@@funxDB.has_key?(bodyCk) and @@funxDB[name] == body)
         if @@funxDB.has_key?(bodyCk) and @@funxDB[name] == body
           edges = @@funxDB[bodyCk]
           edges.each {|edge| self.edge(*edge)}
@@ -228,6 +243,7 @@ class SingleFunctionGraph < FunctionGraph
       @scannednames << f
       body   = graph.funx[f]
       bodyCk = hexencode(body)
+      #if @disableCache or (@@funxDB.has_key?(bodyCk) and @@funxDB[f] == body)
       if @@funxDB.has_key?(bodyCk) and @@funxDB[f] == body
         edges = @@funxDB[bodyCk]
         edges.each {|edge| graph.edge(*edge)}
@@ -236,7 +252,7 @@ class SingleFunctionGraph < FunctionGraph
         edges = []
         # scan for any other function in the body of f
         (names - [f]).each {|g|
-          if /#@@matchBeforFuncName#{Regexp.escape(g)}#@@matchAfterFuncName/.match(body) 
+          if /#@@matchBeforFuncName#{Regexp.escape(g)}#@@matchAfterFuncName/.match(body)
             graph.edge(f,g)
             edges << [f,g]
             # go downstairs for all functions from the scanned files
