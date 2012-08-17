@@ -4,6 +4,7 @@ require "codegraph"
 require "thread"
 require "pp"
 require "jobqueue"
+require "tempfile"
 
 FORTRAN_SOURCE_0 = "test.f90"
 FORTRAN_SOURCE_1 = "module_B.f90"
@@ -37,6 +38,14 @@ FORTRAN_structs  = {
   }
 }
 
+def tempPath
+  t = Tempfile.new(rand.to_s)
+  path = t.path
+  t.close
+  t.unlink
+  path
+end
+
 class TestCodeParser < Test::Unit::TestCase
 
   thisdir     = FileUtils.pwd
@@ -61,48 +70,55 @@ class TestCodeParser < Test::Unit::TestCase
     }
   }
 
-  def test_CodeParser
-    cp = CodeParser.new
-    cp.read(@@test0_f90)
-    pp cp
-#    assert_equal(elementsOf(@@test0_f90), CodeParser.filesDB.map {|v| v[1]}.flatten.transpose[0])
-#   assert_equal(typesOf(@@test0_f90),cp.funxLocations.transpose[1])
-#   assert_equal(linesOf(@@test0_f90),cp.funxLocations.transpose[2])
-#   assert_equal(elementsOf(@@test0_f90),cp.funx.keys)
-#   cp.read(@@test1_f90)
-#   assert_equal(elementsOf(@@test1_f90), cp.funxLocations.transpose[0])
-#   assert_equal(typesOf(@@test1_f90),cp.funxLocations.transpose[1])
-#   assert_equal(linesOf(@@test1_f90),cp.funxLocations.transpose[2])
-#   assert_equal(elementsOf(@@test0_f90)+elementsOf(@@test1_f90),cp.funx.keys)
+  if `hostname`.chomp == 'thingol' then
+
+    def test_tempPath
+      assert(! tempPath.nil?,"tempPath result is nil")
+      assert_equal('/tmp',tempPath[0,4])
+    end
+    def _setup
+      puts "CleanUp ~/.codegraph...."
+      Dir.glob("#{ENV['HOME']}/.codegraph/*.json").each {|f| 
+        puts " ... remove #{f}"
+        FileUtils.rm(f)
+      }
+    end
+    def test_icon
+      cp = CodeParser.new
+      cp.read(*Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90"))
+      funx = cp.funx.keys
+      ["map_cell2edges", "map_edges2cell", "calculate_oce_diagnostics"].each {|s| assert_include(funx,s)}
+    end
+  end
+
+
+  def test_f90
+    cpA = CodeParser.new(:debug => true,:dir => tempPath)
+    cpA.read(@@test0_f90)
+
+    assert_equal(["xfer_var",
+                 "xfer_idx",
+                 "allocate_int_state",
+                 "construct",
+                 "xfer_var_r2",
+                 "xfer_var_r3",
+                 "xfer_var_r4",
+                 "xfer_var_i2",
+                 "xfer_idx_2",
+                 "xfer_idx_3",
+                 "transfer"],cpA.funx.keys)
 
     assert_equal("SUBROUTINE construct()\nDO jg = 1,n\n  CALL allocate_int_state( )\n  CALL scalar_int_coeff()\nENDDO\nEND SUBROUTINE construct\n",
-                 cp.funx["construct"])
+                 cpA.funx["construct"])
 
-    myfunx = cp.funx
-    cp.read(@@test0_f90,@@test1_f90)
-    assert_equal(myfunx,cp.funx)
-    cp.read(@@test0_f90,@@test1_f90)
-    cp.read(@@test0_f90,@@test1_f90)
-    cp.read(@@test0_f90,@@test1_f90)
-    assert_equal(myfunx,cp.funx)
+    cpB = CodeParser.new(:debug => true,:dir => tempPath)
+    cpB.read(@@test1_f90)
+    cpAll = CodeParser.new
+    cpAll.read(@@test0_f90,@@test1_f90)
+    assert_equal(cpAll.funx.sort,(cpA.funx.sort + cpB.funx.sort).sort)
   end
 
-  def test_CodeParser_threaded_init
-    threads = []
-    [ @@test0_f90,@@test1_f90,
-      @@test0_f90,@@test1_f90,
-      @@test0_f90,@@test1_f90 ].each {|file|
-      threads << Thread.new(file) {|file|
-       cp = CodeParser.new
-       cp.read(file)
-#      assert_equal(elementsOf(file),cp.funxLocations.transpose[0])
-#      assert_equal(typesOf(file),cp.funxLocations.transpose[1])
-#      assert_equal(linesOf(file),cp.funxLocations.transpose[2])
-      }
-    }
-    threads.each {|t| t.join}
-  end
-  def test_CodeParser_threaded_read
+  def test_threaded_read
     cp = CodeParser.new
     threads = []
     [ @@test0_f90,@@test1_f90].each {|file|
@@ -115,8 +131,8 @@ class TestCodeParser < Test::Unit::TestCase
   end
 
   def test_files_relation
-    cp = CodeParser.new
-    [ @@test0_f90,@@test1_f90].each {|file| cp.read(file) }
+    cp = CodeParser.new(:debug => true,:dir => tempPath)
+    cp.read(*[ @@test0_f90,@@test1_f90])
     assert_equal({"/home/ram/src/git/codegraph/test/test.f90"=>
 		 ["xfer_var",
 		   "xfer_idx",
@@ -144,31 +160,10 @@ class TestCodeParser < Test::Unit::TestCase
   end
 
   def test_f90_modules
-    cp = CodeParser.new(true,'--fortran-kinds=m')
+    cp = CodeParser.new(:debug => true,:ctagsOpts => '--fortran-kinds=m',:dir => tempPath)
     cp.read(@@test0_f90)
     assert_equal('A',cp.funx.keys.first)
     cp.read(@@test1_f90)
     assert_equal(['A','B','C'],cp.funx.keys)
-  end
-
-  if `hostname`.chomp == 'thingol' then
-    def test_icon
-      cp = CodeParser.new
-      jq = JobQueue.new
-      Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90").each {|file|
-        puts file
-        jq.push(cp,:read,file)
-      }
-      jq.run
-      pp cp.funx.keys
-    end
-  end
-
-  def _testAll
-    tObj, threads   = TestCdoGSL.new(:test_gsl), []
-    self.class.public_instance_methods.sort.grep(/^test_\w.*/).delete_if {|m| tObj.method(m.to_sym).arity != 0}.each {|test|
-      threads << Thread.new(test) {|_test| system("ruby test_eca.rb -n #{_test}")}
-    }
-    threads.each {|t| t.join}
   end
 end
