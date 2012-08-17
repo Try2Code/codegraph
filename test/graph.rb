@@ -4,10 +4,19 @@ require "codegraph"
 require "thread"
 require "pp"
 require "jobqueue"
+require "tempfile"
 
 FORTRAN_SOURCE_0 = "test.f90"
 FORTRAN_SOURCE_1 = "module_B.f90"
 C_SOURCE         = "test00.c"
+
+def tempPath
+  t = Tempfile.new(rand.to_s)
+  path = t.path
+  t.close
+  t.unlink
+  path
+end
 
 class TestGraph < Test::Unit::TestCase
 
@@ -33,24 +42,24 @@ class TestGraph < Test::Unit::TestCase
   end
   def testSFG
     filelist = [@@test0_f90,@@test1_f90]
-    sg  = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'transfer')
-    sg_ = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_var')
+    sg  = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'transfer',:dir => tempPath)
+    sg_ = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_var',:dir => tempPath)
     display(sg,'testsg')
     display(sg_,'testsg_')
   end
   def testUFG
-    sg = UpperFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_idx_2',:debug => false)
+    sg = UpperFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_idx_2',:debug => true,:dir => tempPath)
     ofile = 'testufg'
     display(sg,ofile)
   end
   def _test8FG
-    efg = EightFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_idx_3',:debug => false)
+    efg = EightFunctionGraph.new(:filelist => @@filelist,:function => 'xfer_idx_3',:debug => false,:dir => tempPath)
     display(efg,'test8fg')
   end
 
   def testFileGraph
     fileG = FileGraph.new(:filelist => @@filelist,:debug => true)
-    sg  = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'transfer')
+    sg  = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'transfer',:dir => tempPath)
     fileG.subgraph(sg)
     display(fileG,'testFileG')
   end
@@ -69,7 +78,7 @@ class TestGraph < Test::Unit::TestCase
     end
     def test_icon
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
-      fg = SingleFunctionGraph.new(:filelist => filelist,:function => 'mo_hydro_ocean_run',:debug => true)
+      fg = SingleFunctionGraph.new(:filelist => filelist,:function => 'mo_hydro_ocean_run',:debug => true,:dir => tempPath)
       fg.scan if false
       fg.rotate
       fg.node_attribs << fg.box
@@ -77,7 +86,7 @@ class TestGraph < Test::Unit::TestCase
     end
     def test_icon_full
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/shared/*f90")
-      fg = SingleFunctionGraph.new(:function => 'add_var',:filelist => filelist,:debug => true,:excludes => ['+','-','*','==','finish'])
+      fg = SingleFunctionGraph.new(:function => 'add_var',:filelist => filelist,:debug => true,:excludes => ['+','-','*','==','finish'],:dir => tempPath)
       fg.rotate
       ofile = 'testiconfull'
       display(fg,ofile)
@@ -85,8 +94,8 @@ class TestGraph < Test::Unit::TestCase
     def test_icon_filegraph
       #filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
-      fileg =     FileGraph.new(:filelist => filelist)
-      funcg = FunctionGraph.new(:filelist => filelist)
+      fileg =     FileGraph.new(:filelist => filelist,:dir => tempPath)
+      funcg = FunctionGraph.new(:filelist => filelist,:dir => tempPath)
       funcg.scan
 
       ofile = 'testiconfiles'
@@ -99,7 +108,7 @@ class TestGraph < Test::Unit::TestCase
       display(fileg,'funxPlusfiles','svg')
     end
     def test_cdo
-      sg  = SingleFunctionGraph.new(:filelist =>[@@test0_c] ,:function => 'Copy',:debug => true)
+      sg  = SingleFunctionGraph.new(:filelist =>[@@test0_c] ,:function => 'Copy',:debug => true,:dir => tempPath)
       display(sg,'cdo')
     end
   end
