@@ -19,7 +19,7 @@ I take codegraph as a moving target. I uses it for PHP in the beginning, but cta
 
 h2. changelog
 
-|/3. 0.8   | Switch from RGL to Graph because of performance |
+|/6. 0.8 (!releaed)   | Switch from RGL to Graph because of performance |
 |      | Cache scan results internally for speeding repeatedly runs |
 |      | new option: cluster graph with file names (experimental)|
 |      | new option: rotate the graph|
