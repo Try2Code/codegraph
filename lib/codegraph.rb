@@ -7,7 +7,7 @@ require 'pp'
 
 
 module Codegraph
-  VERSION = '0.7.22rc1'
+  VERSION = '0.7.22'
 end
 
 class CodeParser
