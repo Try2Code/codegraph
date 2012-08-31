@@ -3,7 +3,7 @@ require 'rake/testtask'
 require 'rdoc/task'
 require 'rubygems/package_task'
 
-CLEAN.add '*.dot'
+%w[png gif ps svg dot].each {|format| CLEAN.add "*.#{format}" }
 
 # build gem ===================================================================
 load("gemspec")
@@ -20,9 +20,11 @@ end
 
 
 # test ========================================================================
-Rake::TestTask.new(:test) do |t|
-  t.test_files = Dir.glob("test/*.rb")
-  t.verbose = true
-  t.warning = true
-end
+%w[test/parser.rb test/graph.rb].each {|testfile|
+  Rake::TestTask.new("test_#{File.basename(testfile,".rb")}".to_sym) do |t|
+    t.test_files = [testfile]
+    t.verbose = true
+    t.warning = true
+  end
+}
 # vim:ft=ruby
