@@ -58,7 +58,7 @@ class TestGraph < Test::Unit::TestCase
   end
 
   def testFileGraph
-    fileG = FileGraph.new(:filelist => @@filelist,:debug => true)
+    fileG = FileGraph.new(:filelist => @@filelist,:debug => true,:dir => tempPath)
     sg  = SingleFunctionGraph.new(:filelist => @@filelist,:function => 'transfer',:dir => tempPath)
     fileG.subgraph(sg)
     display(fileG,'testFileG')
@@ -78,8 +78,8 @@ class TestGraph < Test::Unit::TestCase
     end
     def test_icon
       filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
-      fg = SingleFunctionGraph.new(:filelist => filelist,:function => 'mo_hydro_ocean_run',:debug => true,:dir => tempPath)
-      fg.scan if false
+      fg = FunctionGraph.new(:filelist => filelist,:function => 'mo_hydro_ocean_run')#,:debug => true,:dir => tempPath)
+      fg.scan if true
       fg.rotate
       fg.node_attribs << fg.box
       display(fg,'testicon','svg')
@@ -111,5 +111,5 @@ class TestGraph < Test::Unit::TestCase
       sg  = SingleFunctionGraph.new(:filelist =>[@@test0_c] ,:function => 'Copy',:debug => true,:dir => tempPath)
       display(sg,'cdo')
     end
-  end
+  end if false
 end
