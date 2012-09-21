@@ -122,7 +122,7 @@ class TestCodeParser < Test::Unit::TestCase
     cp = CodeParser.new
     threads = []
     [ @@test0_f90,@@test1_f90].each {|file|
-      threads << Thread.new(cp,file) {|cp,file| cp.read(file) }
+      threads << Thread.new(cp,file) {|_cp,_file| _cp.read(_file) }
     }
     threads.each {|t| t.join}
     cp4comparison = CodeParser.new
