@@ -74,7 +74,7 @@ class CodeParser
           when '.c','.h'
             cppCommand = "cpp -w -fpreprocessed -E  -fdirectives-only #{file}  -o #{@dir}/#{tempfile} 2>/dev/null"
             cppCommand = "cpp -fpreprocessed #{file}  -o #{@dir}/#{tempfile} 2>/dev/null"
-            grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^#' | perl -pi -e " +'\'s/".[^"]*"//g\'' +" > #{@dir}/#{basefile}"
+            grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^#' | perl -pi -e " << '\'s/".[^"]*"//g\'' << " > #{@dir}/#{basefile}"
           when '.f','.f77','.f90','.f95'
             cppCommand = "cp #{file} #{@dir}/#{tempfile}"
             grep       = "grep -v -e '^$' #{@dir}/#{tempfile} | grep -v -e '^ *!' > #{@dir}/#{basefile}"
@@ -278,7 +278,7 @@ class UpperFunctionGraph < SingleFunctionGraph
       names = graph.funx.keys + @adds - @excludes
       unless names.include?(func)
         warn "Function '#{func}' not found"
-        exit -1
+        exit false
       end
       @scannednames << func
       graph.funx.each_pair {|g,gbody|
