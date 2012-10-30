@@ -33,6 +33,10 @@ h2. changelog
 |      |skipped -8 option, this will be reimplemented later|
 |      |general speed up through threadding and caching of results|
 
+h2. license
+
+codegraph used BSD license, see LICENSE file
+
 h2. thanks
 
 * Horst Duchene, developer of the Ruby Graph Library
