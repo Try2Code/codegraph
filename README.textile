@@ -17,7 +17,7 @@ h2. development
 
 I take codegraph as a moving target. I uses it for PHP in the beginning, but ctags knows a lot languages. So I took over Bash and Perl, too. Now is mainly used for C and Fortran. That's why I added these two to codegraph. Preprocessing is a little bit tricky, but at least for C, it works (hopefully).  If you have any kind of feature wishes, please let me know.
 
-h2. changelog
+h1. changelog
 
 |/6. 0.8 (!released)   | Switch from RGL to Graph because of performance |
 |        Cache scan results internally for speeding repeatedly runs |
