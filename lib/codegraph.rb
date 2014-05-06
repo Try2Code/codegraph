@@ -4,6 +4,7 @@ require 'digest'
 require 'json'
 require 'fileutils'
 require 'pp'
+require 'ascii'
 
 
 module Codegraph
@@ -89,7 +90,8 @@ class CodeParser
           puts command if @debug
           system(command)
 
-          code          = open(@dir+'/'+ File.basename(file)).readlines
+          puts File.basename(file) if @debug
+          code          = open(@dir+'/'+ File.basename(file)).readlines.map {|l| Ascii.process(l) }
           funxLocations = IO.popen(gen4ctags).readlines.map {|l| l.split[0,4]}
           @@lock.synchronize { 
             @@filesDB[checksum] = [code,funxLocations]
@@ -108,7 +110,7 @@ class CodeParser
           line           = line.to_i
           startLineIndex = line - 1
           endLineIndex   = (i+1 < funxLocations.size) ? funxLocations[i+1][2].to_i - 2 : -1
-          body = code[startLineIndex..endLineIndex].join
+          body = Ascii.process(code[startLineIndex..endLineIndex].join)
           @@lock.synchronize {
             @funx.store(name,body)
           }
@@ -120,6 +122,7 @@ class CodeParser
     updateFilesDB
   end
   def updateFilesDB
+     File.open(@@filesDBfile+"test","w") {|f| f << @@filesDB.to_s} unless @@filesCk == @@filesDB.hash
      File.open(@@filesDBfile,"w") {|f| f << JSON.generate(@@filesDB)} unless @@filesCk == @@filesDB.hash
   end
   private :updateFilesDB
@@ -135,7 +138,7 @@ end
 class FunctionGraph < Graph
   include Digest
 
-  attr_accessor :funx, :adds, :excludes, :debug
+  attr_accessor :funx, :adds, :excludes, :debug, :parser
 
   # internal database for former scans
   @@workDir    = ENV['HOME'] + '/.codegraph'
@@ -154,6 +157,7 @@ class FunctionGraph < Graph
 
     @debug        = @config[:debug].nil?        ? false       : @config[:debug]
     @dir          = @config[:dir].nil?          ? [ENV['HOME'],'.codegraph'].join("/")   : @config[:dir]
+    @ctagsOpts    = @config[:ctagsOpts] unless @config[:ctagsOpts].nil?
     @disableCache = @config[:disableCache].nil? ? false       : @config[:disableCache]
 
     @@matchBeforFuncName = @config[:matchBefor].nil? ? '[^A-z0-9_]\s*': @config[:matchBefor]
@@ -164,7 +168,7 @@ class FunctionGraph < Graph
     @adds     = @config[:adds] || []
     @excludes = @config[:excludes] || []
 
-    @parser   = CodeParser.new(:debug => @debug,:dir => @dir)
+    @parser   = CodeParser.new(@config)
     @parser.read(*@config[:filelist])
     @funx     = @parser.funx
   end
