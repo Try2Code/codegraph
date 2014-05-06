@@ -2,7 +2,7 @@ require 'rubygems'
 
 GEM_SPEC = Gem::Specification.new do |s|
   s.name              = "codegraph"
-  s.version           = '0.7.21'
+  s.version           = '0.7.22'
   s.date              = Time.new.strftime("%Y-%m-%d")
 
   s.description       = "Display functional dependencies in source code (C, Fortran, PHP, Perl)"
@@ -16,6 +16,7 @@ GEM_SPEC = Gem::Specification.new do |s|
 
   s.add_dependency('graph')
   s.add_dependency('jobQueue')
+  s.add_dependency('ascii')
   s.add_development_dependency('rake')
 
   s.author            = "Ralf Mueller"
