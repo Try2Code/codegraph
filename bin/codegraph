@@ -47,7 +47,7 @@ def parse(args)
       $options[:boxes] = true
     end
     opts.on("-C", "--ctags-opts KIND",String) do |opts|
-      $options[:ctagsopts] = opts
+      $options[:ctagsOpts] = opts
     end
     opts.on("--match-before REGEXP",String) do |regexp|
       $options[:matchBefore] = regexp
