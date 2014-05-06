@@ -1,8 +1,9 @@
 $:.unshift File.join(File.dirname(__FILE__),"..","lib")
-require "test/unit"
+require 'minitest/autorun'
 require "codegraph"
 require "thread"
 require "pp"
+require 'json'
 require "jobqueue"
 require "tempfile"
 
@@ -46,7 +47,7 @@ def tempPath
   path
 end
 
-class TestCodeParser < Test::Unit::TestCase
+class TestCodeParser < Minitest::Test
 
   thisdir     = FileUtils.pwd
   @@testdir   = File.basename(thisdir) == 'test' ? thisdir : [thisdir,'test'].join(File::SEPARATOR)
@@ -165,5 +166,10 @@ class TestCodeParser < Test::Unit::TestCase
     assert_equal('A',cp.funx.keys.first)
     cp.read(@@test1_f90)
     assert_equal(['A','B','C'],cp.funx.keys)
+  end
+  def test_icon_modules
+    cp = CodeParser.new(:debug => false,:ctagsOpts => '--fortran-kinds=m',:dir => tempPath,
+                       :matchBefor => 'USE\s+', :matchAfter => '(,| |$)')
+    cp.read(*Dir.glob("/home/ram/src/git/icon/src/**/*.f90"))
   end
 end

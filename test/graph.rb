@@ -1,5 +1,5 @@
 $:.unshift File.join(File.dirname(__FILE__),"..","lib")
-require "test/unit"
+require "minitest/autorun"
 require "codegraph"
 require "thread"
 require "pp"
@@ -18,7 +18,7 @@ def tempPath
   path
 end
 
-class TestGraph < Test::Unit::TestCase
+class TestGraph < Minitest::Test
 
   DISPLAY = {'png' => 'sxiv','svg' => 'chromium'}
 
@@ -77,9 +77,11 @@ class TestGraph < Test::Unit::TestCase
       }
     end
     def test_icon
-      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
-      fg = FunctionGraph.new(:filelist => filelist,:function => 'mo_hydro_ocean_run')#,:debug => true,:dir => tempPath)
-      fg.scan if true
+      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/**/*f90")
+      fg = SingleFunctionGraph.new(:filelist => filelist,:function => 'ice_slow',
+                                   :debug => false,:dir => tempPath,
+                                  :excludes => %w[< <= > >= - + * /= = ==])
+      fg.scan if false
       fg.rotate
       fg.node_attribs << fg.box
       display(fg,'testicon','svg')
@@ -92,14 +94,14 @@ class TestGraph < Test::Unit::TestCase
       display(fg,ofile)
     end
     def test_icon_filegraph
-      #filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/*/*f90")
-      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90")
+      filelist = Dir.glob("#{ENV['HOME']}/src/git/icon/src/ocean/**/*f90")
       fileg =     FileGraph.new(:filelist => filelist,:dir => tempPath)
       funcg = FunctionGraph.new(:filelist => filelist,:dir => tempPath)
       funcg.scan
 
       ofile = 'testiconfiles'
-      display(fileg,ofile) if false
+      display(fileg,ofile,'svg') if true
+      return
       display(funcg,ofile) if false
 
       fileg.subgraph(funcg)
@@ -111,5 +113,29 @@ class TestGraph < Test::Unit::TestCase
       sg  = SingleFunctionGraph.new(:filelist =>[@@test0_c] ,:function => 'Copy',:debug => true,:dir => tempPath)
       display(sg,'cdo')
     end
-  end if false
+    def test_icon_modules
+      fg = SingleFunctionGraph.new(:debug => false,:ctagsOpts => '--fortran-kinds=m',:dir => tempPath,:filelist => Dir.glob("/home/ram/src/git/icon/src/**/*.f90"),
+                             :matchBefor => 'USE\s+', :matchAfter => '(,| |$)',
+                                 :function => 'mo_ocean_model')
+      display(fg,'iconModules')
+    end
+    def test_mpas
+      filelist = Dir.glob("#{ENV['HOME']}/src/MPAS-Release/src/core_ocean/*.F")
+      funcg = FunctionGraph.new(:filelist => filelist,:dir => tempPath)
+      funcg.scan
+      funcg.rotate
+      funcg.node_attribs << funcg.box
+      ofile = 'testMPAS'
+      display(funcg,ofile)
+    end
+    def test_mpiom
+      filelist = Dir.glob("#{ENV['HOME']}/src/mpiom/src/*.f90")
+      funcg = FunctionGraph.new(:filelist => filelist,:dir => tempPath,:excludes => ['+','-','*','==','/='])
+      funcg.scan
+      funcg.rotate
+      funcg.node_attribs << funcg.box
+      ofile = 'testMPIOM'
+      display(funcg,ofile)
+    end
+  end# if false
 end
