@@ -27,4 +27,12 @@ end
     t.warning = true
   end
 }
+%w[Graph Parser].each {|tag|
+  desc "run optionally names #{tag} tests"
+  task "test#{tag}".to_sym, :name do |t,args|
+    cmd = "ruby test/#{tag.downcase}.rb"
+    cmd << " --name=#{args.name}" unless args.name.nil?
+    sh cmd
+  end
+}
 # vim:ft=ruby

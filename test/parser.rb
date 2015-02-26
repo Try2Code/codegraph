@@ -39,6 +39,8 @@ FORTRAN_structs  = {
   }
 }
 
+$LOCAL = 'nearly' == `hostname`.chomp
+
 def tempPath
   t = Tempfile.new(rand.to_s)
   path = t.path
@@ -71,7 +73,7 @@ class TestCodeParser < Minitest::Test
     }
   }
 
-  if `hostname`.chomp == 'thingol' then
+  if $LOCAL then
 
     def test_tempPath
       assert(! tempPath.nil?,"tempPath result is nil")
@@ -86,9 +88,9 @@ class TestCodeParser < Minitest::Test
     end
     def test_icon
       cp = CodeParser.new
-      cp.read(*Dir.glob("#{ENV['HOME']}/src/git/icon/src/oce_dyn*/*f90"))
+      cp.read(*Dir.glob("#{ENV['HOME']}/src/icon-dev/src/ocean/**/*f90"))
       funx = cp.funx.keys
-      ["map_cell2edges", "map_edges2cell", "calculate_oce_diagnostics"].each {|s| assert_include(funx,s)}
+      %w[prepare_tracer_transport zonal_periodic_zero_at_pols].each {|s| assert_includes(funx,s)}
     end
   end
 
@@ -109,8 +111,7 @@ class TestCodeParser < Minitest::Test
                  "xfer_idx_3",
                  "transfer"],cpA.funx.keys)
 
-    assert_equal("SUBROUTINE construct()\nDO jg = 1,n\n  CALL allocate_int_state( )\n  CALL scalar_int_coeff()\nENDDO\nEND SUBROUTINE construct\n",
-                 cpA.funx["construct"])
+    assert_equal("SUBROUTINE construct()DO jg = 1,nCALL allocate_int_state( )CALL scalar_int_coeff()ENDDOEND SUBROUTINE construct", cpA.funx["construct"])
 
     cpB = CodeParser.new(:debug => true,:dir => tempPath)
     cpB.read(@@test1_f90)
@@ -134,7 +135,7 @@ class TestCodeParser < Minitest::Test
   def test_files_relation
     cp = CodeParser.new(:debug => true,:dir => tempPath)
     cp.read(*[ @@test0_f90,@@test1_f90])
-    assert_equal({"/home/ram/src/git/codegraph/test/test.f90"=>
+    assert_equal({"/home/ram/src/codegraph/test/test.f90"=>
 		 ["xfer_var",
 		   "xfer_idx",
 		   "allocate_int_state",
@@ -146,7 +147,7 @@ class TestCodeParser < Minitest::Test
 		   "xfer_idx_2",
 		   "xfer_idx_3",
 		   "transfer"],
-		   "/home/ram/src/git/codegraph/test/module_B.f90"=>
+		   "/home/ram/src/codegraph/test/module_B.f90"=>
 		 ["xfer_var_B",
 		   "xfer_idx_B",
 		   "allocate_int_state_B",
@@ -170,6 +171,42 @@ class TestCodeParser < Minitest::Test
   def test_icon_modules
     cp = CodeParser.new(:debug => false,:ctagsOpts => '--fortran-kinds=m',:dir => tempPath,
                        :matchBefor => 'USE\s+', :matchAfter => '(,| |$)')
-    cp.read(*Dir.glob("/home/ram/src/git/icon/src/**/*.f90"))
+    cp.read(*Dir.glob("/home/ram/src/icon-dev/src/**/*.f90"))
+    [ "mo_ocean_GM_Redi",
+      "mo_ocean_ab_timestepping",
+      "mo_ocean_ab_timestepping_mimetic",
+      "mo_ocean_boundcond",
+      "mo_ocean_bulk",
+      "mo_ocean_check_tools",
+      "mo_ocean_coupling",
+      "mo_ocean_diagnostics",
+      "mo_ocean_diffusion",
+      "mo_ocean_ext_data",
+      "mo_ocean_forcing",
+      "mo_ocean_gmres",
+      "mo_ocean_initial_conditions",
+      "mo_ocean_initialization",
+      "mo_ocean_math_operators",
+      "mo_ocean_model",
+      "mo_ocean_nml",
+      "mo_ocean_nml_crosscheck",
+      "mo_ocean_output",
+      "mo_ocean_patch_setup",
+      "mo_ocean_physics",
+      "mo_ocean_postprocessing",
+      "mo_ocean_read_namelists",
+      "mo_ocean_state",
+      "mo_ocean_statistics",
+      "mo_ocean_testbed",
+      "mo_ocean_testbed_modules",
+      "mo_ocean_testbed_operators",
+      "mo_ocean_testbed_read",
+      "mo_ocean_testbed_vertical_diffusion",
+      "mo_ocean_thermodyn",
+      "mo_ocean_tracer",
+      "mo_ocean_tracer_transport_horz",
+      "mo_ocean_tracer_transport_vert",
+      "mo_ocean_types",
+      "mo_ocean_veloc_advection"].each {|mod| assert_includes(cp.funx.keys.sort,mod)}
   end
 end
