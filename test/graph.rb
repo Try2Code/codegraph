@@ -10,6 +10,8 @@ FORTRAN_SOURCE_0 = "test.f90"
 FORTRAN_SOURCE_1 = "module_B.f90"
 C_SOURCE         = "test00.c"
 
+$LOCAL = 'nearly' == `hostname`.chomp
+
 def tempPath
   t = Tempfile.new(rand.to_s)
   path = t.path
@@ -31,7 +33,7 @@ class TestGraph < Minitest::Test
 
   def display(graph,filename,type='png')
     graph.save(filename,type)
-    system("#{DISPLAY[type]} #{filename}.#{type}") if 'thingol' == `hostname`.chomp
+    system("#{DISPLAY[type]} #{filename}.#{type}") if $LOCAL
   end
 
   def testFG
@@ -68,7 +70,7 @@ class TestGraph < Minitest::Test
     fg = FunctionGraph.new(:filelist => @@filelist)
   end
 
-  if `hostname`.chomp == 'thingol' then
+  if $LOCAL then
     def _setup
       puts "CleanUp ~/.codegraph...."
       Dir.glob("#{ENV['HOME']}/.codegraph/*.json").each {|f| 
