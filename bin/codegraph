@@ -65,8 +65,12 @@ def parse(args)
       end
       $options[:filelist].flatten!
     end
-    opts.on("-o", "--output FILE", "Write image output file (supported formats: ps,png,jpw,svg,..., see 'man dot')") do |ofile|
+    opts.on("-o", "--output FILE", "Write image output file (supported formats: ps,png,jpg,svg,..., see 'man dot')") do |ofile|
       $options[:otype] = File.extname(ofile)[1..-1]
+      if $options[:otype].nil? then
+        warn "Please use a propper extension for the output file: ps,png,...!"
+        exit(1)
+      end
       $options[:ofile] = ofile[0..(-$options[:otype].size-2)]
     end
     opts.on("-V", "--version","Print version") do 
