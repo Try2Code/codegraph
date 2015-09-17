@@ -24,7 +24,7 @@ class CodeParser
   @@filesCk     = @@filesDB.hash
   @@lock        = Mutex.new
 
-  # come class methods
+  # some class methods
   def CodeParser.filesDB
     @@filesDB
   end
